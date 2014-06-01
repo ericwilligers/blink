@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html>
 <body>
-<div id="target"></div>
 <script src="../../../resources/runner.js"></script>
+<div id="target"></div>
 <script>
 var animation = new Animation(document.getElementById("target"), []);
-// document.timeline.play(animation);
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests setting Animation.timing.delay in the Web Animations API.",
     run: function() {
