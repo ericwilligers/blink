@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="element"></div>
+<script>
+var player;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests reversing playbackRate in the Web Animations API with no animation source.",
+    setup: function() {
+        var element = document.getElementById('element');
+        var keyframes = [
+            {opacity: '1', offset: 0},
+            {opacity: '0', offset: 1}
+        ];
+        player = element.animate(keyframes, 1000000);
+        player.cancel();
+    },
+    run: function() {
+        var rate = 1;
+        for (var i = 0; i < 100000; i++) {
+            rate = -rate;
+            player.playbackRate = rate;
+}}});
+</script>
+</body>
+</html>
