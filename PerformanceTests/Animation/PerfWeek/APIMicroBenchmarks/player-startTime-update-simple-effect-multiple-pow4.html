@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id='aDiv'></div>
+<script src="../../../resources/runner.js"></script>
+<script>
+var player = document.timeline.play(new Animation(aDiv, [{width: '100px', height: '100px',
+                backgroundColor: 'red', left: '100px', top: '100px', transform: 'translate(100px ,100px)',
+                opacity: '1', color: 'green', fontSize: '10px', zIndex: '0'},
+                {width: '200px', height: '200px', backgroundColor: 'green', left: '200px', top: '200px',
+                transform: 'rotate(20deg)', opacity: '0.5', color: 'red', fontSize: '20px', zIndex: '100'}
+                ], 100));
+
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests updating the start time of an AnimationPlayer with simple effect that updates multiple properties.",
+    run: function() {
+        for (var i = 0; i < 50000; i++) {
+            player.startTime = 50;
+            player.startTime = 0;
+        }
+}});
+</script>
+</body>
+</html>
