@@ -27,8 +27,8 @@ span {
     border-radius: 6px;
 }
 </style>
-<script src="../resources/runner.js"></script>
-<script src="resources/framerate.js"></script>
+<script src="../../../resources/runner.js"></script>
+<script src="../../resources/framerate.js"></script>
 <script>
 var stageWidth = 600;
 var stageHeight = 600;
@@ -105,8 +105,6 @@ function generateParticleKeyframes(index) {
         }
         allParticleKeyframes[index].push(generateKeyframe(t, x, y));
     }
-
-    return keyframes;
 }
 
 function generateKeyframe(t, x, y) {
