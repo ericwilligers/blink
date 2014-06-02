@@ -13,7 +13,7 @@ var anim = new Animation(aDiv, [{width: '100px'}, {width: '200px'},
 document.timeline.play(anim);
 
 PerfTestRunner.measureRunsPerSecond({
-    description: "This benchmark tests reparenting an Animation with complx width effect by playing it.",
+    description: "This benchmark tests reparenting an Animation with complex width effect by playing it.",
     run: function() {
         for (var i = 0; i < 1000; i++)
             players.push(document.timeline.play(anim));
