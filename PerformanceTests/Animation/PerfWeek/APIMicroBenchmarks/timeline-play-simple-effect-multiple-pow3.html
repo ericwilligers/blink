@@ -6,17 +6,23 @@
 <script>
 // stash players in array to avoid GC during run
 var players = [];
+var animations = [];
+
+for (var i = 0; i < 100000; i++) {
+  animations.push(new Animation(aDiv, [{width: '100px', height: '100px',
+                backgroundColor: 'red', left: '100px', top: '100px', transform: 'translate(100px ,100px)',
+                opacity: '1', color: 'green', fontSize: '10px', zIndex: '0'},
+                {width: '200px', height: '200px', backgroundColor: 'green', left: '200px', top: '200px',
+                transform: 'rotate(20deg)', opacity: '0.5', color: 'red', fontSize: '20px', zIndex: '100'}
+                ], 100));
+}
+var pos = 0;
 
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests playing an Animation with an effect with multiple properties in the Web Animations API.",
     run: function() {
         for (var i = 0; i < 1000; i++)
-            players.push(document.timeline.play(new Animation(aDiv, [{width: '100px', height: '100px',
-                backgroundColor: 'red', left: '100px', top: '100px', transform: 'translate(100px ,100px)',
-                opacity: '1', color: 'green', fontSize: '10px', zIndex: '0'},
-                {width: '200px', height: '200px', backgroundColor: 'green', left: '200px', top: '200px',
-                transform: 'rotate(20deg)', opacity: '0.5', color: 'red', fontSize: '20px', zIndex: '100'}
-                ], 100)));
+            players.push(document.timeline.play(animations[pos++]));
 }});
 </script>
 </body>

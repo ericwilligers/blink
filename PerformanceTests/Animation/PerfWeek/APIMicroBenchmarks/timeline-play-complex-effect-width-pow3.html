@@ -6,14 +6,20 @@
 <script>
 // stash players in array to avoid GC during run
 var players = [];
+var animations = []
+for (var i = 0; i < 20000; i++) {
+  animations.push(new Animation(aDiv, [{width: '100px'}, {width: '200px'},
+              {width: '110px'}, {width: '220px'}, {width: '120px'}, {width: '230px'},
+              {width: '330px'}, {width: '440px'}, {width: '100px'}, {width: '200px'}], 100));
+}
+
+var pos = 0;
 
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests playing an Animation with complex width effect in the Web Animations API.",
     run: function() {
         for (var i = 0; i < 1000; i++)
-            players.push(document.timeline.play(new Animation(aDiv, [{width: '100px'}, {width: '200px'},
-              {width: '110px'}, {width: '220px'}, {width: '120px'}, {width: '230px'},
-              {width: '330px'}, {width: '440px'}, {width: '100px'}, {width: '200px'}], 100)));
+            players.push(document.timeline.play(animations[pos++]));
 }});
 </script>
 </body>
