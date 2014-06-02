@@ -7,7 +7,7 @@
 var animation = new Animation(document.getElementById("target"), []);
 var delay;
 PerfTestRunner.measureRunsPerSecond({
-    description: "This benchmark tests setting Animation.timing.delay in the Web Animations API.",
+    description: "This benchmark tests setting and reading Animation.timing.delay in the Web Animations API.",
     run: function() {
         for (var i = 0; i < 5000; i++) {
             animation.timing.delay = i;
