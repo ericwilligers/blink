@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<script src="../../../resources/runner.js"></script>
+<div></div>
+<script>
+var player = document.timeline.play(null);
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests reading AnimationPlayer.source when it is null",
+    run: function() {
+        for (var i = 0; i < 1000000; i++)
+            player.source;
+    }
+});
+</script>
