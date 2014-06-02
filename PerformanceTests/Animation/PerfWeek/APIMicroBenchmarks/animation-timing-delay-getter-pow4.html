@@ -9,7 +9,7 @@ var delay;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests reading Animation.timing.delay in the Web Animations API.",
     run: function() {
-        for (var i = 0; i < 5000; i++)
+        for (var i = 0; i < 10000; i++)
             delay = animation.timing.delay;
 }});
 </script>
