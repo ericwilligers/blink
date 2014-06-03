@@ -4,16 +4,20 @@
 <script src="../../../resources/runner.js"></script>
 <div id="target"></div>
 <script>
-var animation = new Animation(document.getElementById("target"), []);
+var animation;
 var endDelay;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests setting and reading Animation.timing.endDelay in the Web Animations API.",
+    setup: function() {
+        animation = new Animation(document.getElementById("target"), []);
+    },
     run: function() {
         for (var i = 0; i < 1000; i++) {
             animation.timing.endDelay = i;
             endDelay = animation.timing.endDelay;
         }
-}});
+    }
+});
 </script>
 </body>
 </html>

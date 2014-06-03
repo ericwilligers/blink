@@ -2,14 +2,17 @@
 <script src="../../../resources/runner.js"></script>
 <div id="target"></div>
 <script>
-var keyframes = [];
-for (var i = 0; i < 50; i++) {
-    keyframes.push({'left': '100px', 'top': '200px', 'margin-right': '50px', 'color': 'black'});
-    keyframes.push({'left': '400px', 'top': '700px', 'margin-right': '90px', 'color': 'green'});
-}
-var player = target.animate(keyframes);
+var player;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests reading AnimationPlayer.source with a complex Animation",
+    setup: function() {
+        var keyframes = [];
+        for (var i = 0; i < 50; i++) {
+            keyframes.push({'left': '100px', 'top': '200px', 'margin-right': '50px', 'color': 'black'});
+            keyframes.push({'left': '400px', 'top': '700px', 'margin-right': '90px', 'color': 'green'});
+        }
+        player = target.animate(keyframes);
+    },
     run: function() {
         for (var i = 0; i < 100000; i++)
             player.source;
