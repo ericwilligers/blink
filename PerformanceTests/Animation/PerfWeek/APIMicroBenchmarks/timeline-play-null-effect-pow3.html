@@ -12,7 +12,7 @@ var pos = 0;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests playing an Animation with a null Effect in the Web Animations API.",
     setup: function() {
-        for (var i = 0; i < 100000; i++) {
+        for (var i = 0; i < 1000; i++) {
             animations.push(new Animation(aDiv, [], 100));
         }
     },

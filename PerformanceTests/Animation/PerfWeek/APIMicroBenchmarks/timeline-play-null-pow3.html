@@ -8,13 +8,6 @@ var players = [];
 
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests playing a null Animation in the Web Animations API.",
-    setup: function() {
-        for (var i = 0; i < 20000; i++) {
-          animations.push(new Animation(aDiv, [{width: '100px'}, {width: '200px'},
-                      {width: '110px'}, {width: '220px'}, {width: '120px'}, {width: '230px'},
-                      {width: '330px'}, {width: '440px'}, {width: '100px'}, {width: '200px'}], 100));
-        }
-    },
     run: function() {
         for (var i = 0; i < 1000; i++)
             players.push(document.timeline.play(null));
