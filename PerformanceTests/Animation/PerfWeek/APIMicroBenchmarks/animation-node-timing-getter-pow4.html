@@ -5,7 +5,7 @@
 var animation;
 var isTiming;
 PerfTestRunner.measureRunsPerSecond({
-    description: "This benchmark tests reading AnimationNode.localTime",
+    description: "This benchmark tests reading AnimationNode.specified",
     setup: function() {
         animation = new Animation(target, [], {duration: 1000, iterations: 2, fill: 'both'});
         isTiming = animation.timing !== undefined;
