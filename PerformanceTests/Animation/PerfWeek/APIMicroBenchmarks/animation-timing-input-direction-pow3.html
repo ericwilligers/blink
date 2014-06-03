@@ -8,7 +8,7 @@ var animations = [];
 var timing = {direction: 'reverse'};
 
 PerfTestRunner.measureRunsPerSecond({
-    description: "This benchmark tests creating an animation with playbackRate.",
+    description: "This benchmark tests creating an animation with direction.",
     run: function() {
         for (var i = 0; i < 1000; i++)
             animations.push(new Animation(document.documentElement, [], timing));
