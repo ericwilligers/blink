@@ -6,21 +6,24 @@
 <script>
 // stash players in array to avoid GC during run
 var players = [];
-var anim = new Animation(aDiv, [{width: '100px', height: '100px',
-    backgroundColor: 'red', left: '100px', top: '100px', transform: 'translate(100px ,100px)',
-    opacity: '1', color: 'green', fontSize: '10px', zIndex: '0'},
-    {width: '200px', height: '200px', backgroundColor: 'green', left: '200px', top: '200px',
-    transform: 'rotate(20deg)', opacity: '0.5', color: 'red', fontSize: '20px', zIndex: '100'}
-    ], 100);
-
-document.timeline.play(anim);
+var anim;
 
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests reparenting an Animation with a multiple property effect by playing it.",
+    setup: function() {
+        anim = new Animation(aDiv, [{width: '100px', height: '100px',
+            backgroundColor: 'red', left: '100px', top: '100px', transform: 'translate(100px ,100px)',
+            opacity: '1', color: 'green', fontSize: '10px', zIndex: '0'},
+            {width: '200px', height: '200px', backgroundColor: 'green', left: '200px', top: '200px',
+            transform: 'rotate(20deg)', opacity: '0.5', color: 'red', fontSize: '20px', zIndex: '100'}
+            ], 100);
+        document.timeline.play(anim);
+    },
     run: function() {
         for (var i = 0; i < 1000; i++)
             players.push(document.timeline.play(anim));
-}});
+    }
+});
 </script>
 </body>
 </html>
