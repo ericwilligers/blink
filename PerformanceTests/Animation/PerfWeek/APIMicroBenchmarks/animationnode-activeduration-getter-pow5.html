@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<div id='aDiv'></div>
+<script src="../../../resources/runner.js"></script>
+<script>
+var activeDuration;
+var animation;
+
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests reading the active duration of an animation.",
+    setup: function() {
+        animation = new Animation(aDiv, [{opacity: 0}, {opacity: 1}], {delay: 1000, endDelay: 1000, duration: 4000, iterations: 10});
+        if (animation.activeDuration === undefined) {
+            throw "ImNotTestingThis";
+        }
+    },
+    run: function() {
+        for (var i = 0; i < 100000; i++) {
+            activeDuration = animation.activeDuration;
+        }
+    }
+});
+</script>
