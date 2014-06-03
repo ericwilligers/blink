@@ -12,7 +12,7 @@ var pos = 0;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests playing an Animation with complex width effect in the Web Animations API.",
     setup: function() {
-        for (var i = 0; i < 20000; i++) {
+        for (var i = 0; i < 1000; i++) {
             animations.push(new Animation(aDiv, [{width: '100px'}, {width: '200px'},
                       {width: '110px'}, {width: '220px'}, {width: '120px'}, {width: '230px'},
                       {width: '330px'}, {width: '440px'}, {width: '100px'}, {width: '200px'}], 100));
