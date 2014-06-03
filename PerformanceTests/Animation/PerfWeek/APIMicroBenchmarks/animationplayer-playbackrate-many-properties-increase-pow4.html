@@ -14,6 +14,9 @@ PerfTestRunner.measureRunsPerSecond({
             {borderBottomWidth: '9px', borderLeftWidth: '9px', borderRightWidth: '9px', borderTopWidth: '9px', maxWidth: '80px', minWidth: '60px', outlineWidth: '9px', strokeWidth: '9px', width: '70px', offset: 1}
         ];
         player = element.animate(keyframes, 1000000);
+        if (player.playbackRate === undefined) {
+            throw "ImNotTestingThis";
+        }
     },
     run: function() {
         var rate = 1;

@@ -15,6 +15,9 @@ PerfTestRunner.measureRunsPerSecond({
         ];
         player = element.animate(keyframes, 1000000);
         player.cancel();
+        if (player.playbackRate === undefined) {
+            throw "ImNotTestingThis";
+        }
     },
     run: function() {
         var rate = 1;

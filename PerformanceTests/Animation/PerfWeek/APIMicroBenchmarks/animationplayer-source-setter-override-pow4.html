@@ -12,6 +12,9 @@ PerfTestRunner.measureRunsPerSecond({
             new Animation(target, [{'transform': 'translate(200px, 300px)'}, {'transform': 'translate(300px, 200px)'}])
         ];
         player = document.timeline.play(null);
+        if (player.source === undefined) {
+            throw "ImNotTestingThis";
+        }
     },
     run: function() {
         for (var i = 0; i < 10000; i++)
