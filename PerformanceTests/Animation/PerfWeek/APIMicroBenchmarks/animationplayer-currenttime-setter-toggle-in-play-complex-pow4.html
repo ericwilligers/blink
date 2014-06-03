@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var keyframes = [];
+for (var i = 0; i < 50; i++) {
+    keyframes.push({'left': '100px', 'top': '200px', 'margin-right': '50px', 'color': 'black'});
+    keyframes.push({'left': '400px', 'top': '700px', 'margin-right': '90px', 'color': 'green'});
+}
+var player = target.animate(keyframes);
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests setting currentTime on an AnimationPlayer with a complex Animation and toggling whether it is in play",
+    run: function() {
+        for (var i = 0; i < 10000; i++)
+            player.currentTime = i % 2 ? i : -i;
+    }
+});
+</script>

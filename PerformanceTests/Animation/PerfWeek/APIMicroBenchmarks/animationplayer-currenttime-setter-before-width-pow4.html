@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var player = target.animate([{'width': '100px'}, {'width': '200px'}], 1e9);
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests setting currentTime on an AnimationPlayer with an before-phase Animation on width",
+    run: function() {
+        for (var i = 0; i < 10000; i++)
+            player.currentTime = -i-1;
+    }
+});
+</script>
