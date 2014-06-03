@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var animation;
+var isTiming;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests getting AnimationNode.timing",
+    setup: function() {
+        animation = new Animation(target, [], {duration: 1000, iterations: 10, fill: 'both', delay: 100});
+        isTiming = animation.timing !== undefined;
+    },
+    run: function() {
+        if (isTiming) {
+            for (var i = 0; i < 10000; i++)
+                animation.timing;
+        } else {
+            for (var i = 0; i < 10000; i++)
+                animation.specified;
+        }
+    }
+});
+</script>

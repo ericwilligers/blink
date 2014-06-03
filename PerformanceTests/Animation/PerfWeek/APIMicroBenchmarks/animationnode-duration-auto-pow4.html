@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var animation;
+var timing;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests getting AnimationNode.duration with the specified duration as 'auto'",
+    setup: function() {
+        animation = new Animation(target, [], {duration: 'auto'});
+        timing = animation.timing || animation.specified;
+    },
+    run: function() {
+        for (var i = 0; i < 10000; i++) {
+            // Invalidate the animation's timing information
+            timing.playbackRate = i;
+
+            animation.duration
+        }
+    }
+});
+</script>
