@@ -273,6 +273,8 @@ if (window.testRunner) {
         var numberOfRuns = 0;
 
         while (totalTime < timeToRun) {
+            if (currentTest.perRunSetup)
+                callsPerIteration = currentTest.perRunSetup(callsPerIteration);
             totalTime += callRunAndMeasureTime(callsPerIteration);
             numberOfRuns += callsPerIteration;
             if (completedIterations < 0 && totalTime < 100)
