@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="element"></div>
+<script>
+var element;
+var keyframes;
+var players;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests Animation constructor in the Web Animations API with no timing and many properties.",
+    setup: function() {
+        element = document.getElementById('element');
+        keyframes = [
+            {borderBottomWidth: '0px', borderLeftWidth: '0px', borderRightWidth: '0px', borderTopWidth: '0px', maxWidth: '0px', minWidth: '0px', outlineWidth: '0px', strokeWidth: '0px', width: '0px', offset: 0},
+            {borderBottomWidth: '9px', borderLeftWidth: '9px', borderRightWidth: '9px', borderTopWidth: '9px', maxWidth: '80px', minWidth: '60px', outlineWidth: '9px', strokeWidth: '9px', width: '70px', offset: 1}
+        ];
+        players = [];
+        if (window.GCController)
+            window.GCController.collect();
+    },
+    run: function() {
+        for (var i = 0; i < 100; i++) {
+            players.push(new Animation(element, keyframes));
+}}});
+</script>
+</body>
+</html>
