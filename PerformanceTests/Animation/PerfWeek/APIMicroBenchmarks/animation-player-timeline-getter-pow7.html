@@ -12,7 +12,7 @@ PerfTestRunner.measureRunsPerSecond({
         animationPlayer = document.getElementById("target").animate(null);
     },
     run: function() {
-        for (var i = 0; i < 100000; i++)
+        for (var i = 0; i < 10000000; i++)
             timeline = animationPlayer.timeline;
     }
 });
