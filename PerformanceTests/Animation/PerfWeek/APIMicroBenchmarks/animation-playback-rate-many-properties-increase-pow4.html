@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="element"></div>
+<script>
+var player;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests increasing playbackRate in the Web Animations API with many animated properties.",
+    setup: function() {
+        var element = document.getElementById('element');
+        var keyframes = [
+            {borderBottomWidth: '0px', borderLeftWidth: '0px', borderRightWidth: '0px', borderTopWidth: '0px', maxWidth: '0px', minWidth: '0px', outlineWidth: '0px', strokeWidth: '0px', width: '0px', offset: 0},
+            {borderBottomWidth: '9px', borderLeftWidth: '9px', borderRightWidth: '9px', borderTopWidth: '9px', maxWidth: '80px', minWidth: '60px', outlineWidth: '9px', strokeWidth: '9px', width: '70px', offset: 1}
+        ];
+        player = element.animate(keyframes, 1000000);
+    },
+    run: function() {
+        var rate = 1;
+        for (var i = 0; i < 10000; i++) {
+            rate += 1;
+            player.playbackRate = rate;
+}}});
+</script>
+</body>
+</html>
