@@ -6,9 +6,9 @@ var animation;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests reading AnimationNode.localTime",
     setup: function() {
-      var player = target.animate([{left: '0px'}, {left: '100px'}], {duration: 1000, iterations: 2});
-      player.currentTime = 1500;
-      animation = player.source;
+       var player = target.animate([{left: '0px'}, {left: '100px'}], {duration: 1000, iterations: 2});
+       player.currentTime = 1500;
+        animation = player.source;
     },
     run: function() {
         for (var i = 0; i < 100000; i++)
