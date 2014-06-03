@@ -3,16 +3,22 @@
 <div id="target"></div>
 <script>
 var animation;
+var timing;
 PerfTestRunner.measureRunsPerSecond({
-    description: "This benchmark tests reading AnimationNode.localTime",
+    description: "This benchmark tests invalidating then getting AnimationNode.localTime",
     setup: function() {
         var player = target.animate([{left: '0px'}, {left: '100px'}], 1000);
         player.currentTime = 500;
         animation = player.source;
+        timing = animation.timing || animation.specified;
     },
     run: function() {
-        for (var i = 0; i < 100000; i++)
+        for (var i = 0; i < 10000; i++) {
+            // Invalidate the animation's timing information
+            timing.playbackRate = i;
+
             animation.localTime;
+        }
     }
 });
 </script>
