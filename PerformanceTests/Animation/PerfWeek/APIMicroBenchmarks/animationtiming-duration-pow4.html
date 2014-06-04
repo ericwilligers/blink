@@ -9,7 +9,8 @@ var duration;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests setting and getting Animation.timing.duration in the Web Animations API.",
     setup: function() {
-        timing = new Animation(target, []).timing;
+        var animation = new Animation(target, []);
+        timing = animation.timing || animation.specified;
         if (timing.duration === undefined && timing.iterationDuration === undefined) {
             throw "ImNotTestingThis";
         }

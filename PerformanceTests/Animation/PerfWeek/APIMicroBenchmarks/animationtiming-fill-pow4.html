@@ -10,7 +10,8 @@ var fills = ["forwards", "backwards", "none", "both", "auto"];
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests setting and getting Animation.timing.fill in the Web Animations API.",
     setup: function() {
-        timing = new Animation(target, []).timing;
+        var animation = new Animation(target, []);
+        timing = animation.timing || animation.specified;
         if (timing.fill === undefined && timing.fillMode === undefined) {
             throw "ImNotTestingThis";
         }
