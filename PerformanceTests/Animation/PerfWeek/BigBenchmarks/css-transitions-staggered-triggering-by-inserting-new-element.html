@@ -3,23 +3,20 @@
 <container id="container"></container>
 <script>
 var N = 1000;
-var duration = 1000;
+var staggerInterval = 1000;
 var stash = {SHOW: [], HIDE: []};
 var targets = [];
 
 for (var i = 0; i < N; i++) {
   stash.HIDE.push(document.createElement('hide'));
-
   var show = document.createElement('show');
   container.appendChild(show);
-
   var target = document.createElement('target');
-  target._transitionEndTime = -i / N * duration;
   container.appendChild(target);
   targets.push(target);
 }
 
-function triggerTransition(target, fastForward) {
+function startTransition(target, fastForward) {
   var state = target.previousSibling;
   stash[state.tagName].push(state);
   state.remove();
@@ -28,23 +25,23 @@ function triggerTransition(target, fastForward) {
   target.style.transitionDelay = -fastForward + 'ms';
 }
 
-function frame(time) {
-  targets.forEach(function(target) {
-    var newStartTime = null;
-    while (target._transitionEndTime <= time) {
-      newStartTime = target._transitionEndTime;
-      target._transitionEndTime += duration;
-    }
-    if (newStartTime !== null) {
-      triggerTransition(target, time - newStartTime);
-    }
-  });
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
+requestAnimationFrame(function(time) {
+  var staggerStartTime = time - staggerInterval;
+  var i = 0;
 
-requestAnimationFrame(function() {
-  measurementReady = true;
+  function staggeredStart(time) {
+    var staggerTime = time - staggerStartTime;
+    for (; i < N && i < N * staggerTime / staggerInterval; i++) {
+      startTransition(targets[i], staggerTime - (i / N * staggerInterval));
+    }
+    if (staggerTime >= staggerInterval) {
+      measurementReady = true;
+      i = 0;
+      staggerStartTime = time - (staggerTime % staggerInterval);
+    }
+    requestAnimationFrame(staggeredStart);
+  }
+  staggeredStart(time);
 });
 </script>
 
