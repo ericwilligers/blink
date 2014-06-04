@@ -30,13 +30,13 @@ def refreshPerfWeekFolder():
   subprocess.call(['rm', '-r', destination])
   subprocess.call(['cp', '-r', source, destination])
 
-def runBigBenchmarks():
-  subprocess.call([perf_tools_path + '/run_benchmark', 'smoothness.perf_week'] + sys.argv[1:])
+def runBigBenchmarks(run_benchmark_args):
+  subprocess.call([perf_tools_path + '/run_benchmark', 'smoothness.perf_week'] + run_benchmark_args)
 
 def main():
   ensureSmoothnessPerfWeekBenchmark()
   refreshPerfWeekFolder()
-  runBigBenchmarks()
+  runBigBenchmarks(sys.argv[1:])
 
 if __name__ == '__main__':
   main()
