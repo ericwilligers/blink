@@ -27,7 +27,7 @@ def refreshPerfWeekFolder():
   source = perf_week_path + '/BigBenchmarks'
   destination = page_sets_path + '/perf_week'
   print('Mirroring\n%s\nas\n%s' % (destination, source))
-  subprocess.call(['rm', '-rf', destination])
+  subprocess.call(['rm', '-r', destination])
   subprocess.call(['cp', '-r', source, destination])
 
 def runBigBenchmarks():
