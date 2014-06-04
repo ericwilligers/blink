@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var timing;
+var easing;
+var easings = ["linear", "ease", "steps(5, end)", "step-start", "cubic-bezier(1, 1, 0.3, 0.3)"];
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests setting and getting Animation.timing.easing in the Web Animations API.",
+    setup: function() {
+        timing = new Animation(target, []).timing;
+        if (timing.easing === undefined && timing.timingFunction === undefined) {
+            throw "ImNotTestingThis";
+        }
+    },
+    run: function() {
+        if (timing.easing === undefined) {
+            for (var i = 0; i < 1000; i++) {
+                timing.timingFunction = easings[i % 5];
+                easing = timing.timingFunction;
+            }
+        } else {
+            for (var i = 0; i < 1000; i++) {
+                timing.easing = easings[i % 5];
+                easing = timing.easing;
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>
