@@ -1,0 +1,53 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var targets = [];
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+  targets.push(target);
+}
+
+var classNumber = 0;
+setInterval(function() {
+  classNumber = (classNumber + 1) % 2;
+  var className = 'class' + classNumber;
+  targets.forEach(function(target) {
+    target.className = className;
+  });
+}, 1000);
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
+.class0 {
+  opacity: 0;
+  transition: opacity 1s ease-in;
+}
+.class1 {
+  opacity: 1;
+  transition: opacity 1s ease-in;
+}
+</style>
