@@ -2,9 +2,14 @@
 <script src="../../../resources/runner.js"></script>
 <div id="target"></div>
 <script>
-var player = target.animate([{'width': '100px'}, {'width': '200px'}], 1e9);
+var player;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests getting AnimationPlayer.currentTime",
+    setup: function() {
+        player = target.animate([{'width': '100px'}, {'width': '200px'}], 1e9);
+        if (player.currentTime === undefined)
+            throw "ImNotTestingThis";
+    },
     run: function() {
         for (var i = 0; i < 100000; i++)
             player.currentTime;
