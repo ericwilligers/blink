@@ -3,16 +3,18 @@
 <container id="container"></container>
 <script>
 var N = 1000;
-var targets = [];
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
-  targets.push(target);
   container.appendChild(target);
+  target.animate([
+    {opacity: 0},
+    {opacity: 1}
+    ], {
+      duration: 1000,
+      iterations: Infinity
+    });
 }
-
-for (var i in targets)
-  targets[i].animate([{opacity: 0, offset: 0}, {opacity: 1, offset: 1}], {duration: 1000, iterations: Infinity});
 
 requestAnimationFrame(function() {
   measurementReady = true;
@@ -20,6 +22,11 @@ requestAnimationFrame(function() {
 </script>
 
 <style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
 body {
   margin: 0;
   overflow: hidden;
@@ -30,10 +37,5 @@ container {
   width: 550px;
   height: 800px;
   background: magenta;
-}
-target {
-  display: inline-block;
-  width: 9px; height: 9px;
-  background: orange;
 }
 </style>
