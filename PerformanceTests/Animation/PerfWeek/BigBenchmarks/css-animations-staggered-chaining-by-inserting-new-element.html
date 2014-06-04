@@ -3,17 +3,34 @@
 <container id="container"></container>
 <script>
 var N = 1000;
+var staggerTime = 1000;
 
-for (var i = 0; i < N; i++) {
+function startAnimation() {
   var target = document.createElement('target');
+  target.i = 1;
   container.appendChild(target);
   target.addEventListener('webkitAnimationEnd', function(e) {
-    e.target.classList.toggle('anim');
+    e.target.remove();
+    startAnimation();
   });
 }
 
-requestAnimationFrame(function() {
-  measurementReady = true;
+requestAnimationFrame(function(t) {
+  var base = t;
+  var i = 0;
+
+  function staggeredStart(t) {
+    elapsed = t - base;
+    for (; i < N * elapsed / staggerTime; i++) {
+      startAnimation();
+    }
+    if (i < N) {
+      requestAnimationFrame(staggeredStart);
+    } else {
+      measurementReady = true;
+    }
+  }
+  requestAnimationFrame(staggeredStart);
 });
 </script>
 
@@ -24,14 +41,7 @@ target {
   background: orange;
   -webkit-animation: anim1 1s;
 }
-target.anim {
-  -webkit-animation: anim2 1s;
-}
 @-webkit-keyframes anim1 {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-@-webkit-keyframes anim2 {
   0% { opacity: 0; }
   100% { opacity: 1; }
 }

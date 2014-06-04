@@ -3,6 +3,7 @@
 <container id="container"></container>
 <script>
 var N = 1000;
+var staggerTime = 1000;
 
 function startAnimation(element) {
   var player = element.animate([
@@ -14,14 +15,28 @@ function startAnimation(element) {
   }
 }
 
-for (var i = 0; i < N; i++) {
+function addElement() {
   var target = document.createElement('target');
   container.appendChild(target);
   startAnimation(target);
 }
 
-requestAnimationFrame(function() {
-  measurementReady = true;
+requestAnimationFrame(function(t) {
+  var base = t;
+  var i = 0;
+
+  function staggeredStart(t) {
+    elapsed = t - base;
+    for (; i < N * elapsed / staggerTime; i++) {
+      addElement();
+    }
+    if (i < N) {
+      requestAnimationFrame(staggeredStart);
+    } else {
+      measurementReady = true;
+    }
+  }
+  requestAnimationFrame(staggeredStart);
 });
 </script>
 
