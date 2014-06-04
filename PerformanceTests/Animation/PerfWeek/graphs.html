@@ -1,0 +1,59 @@
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript">
+google.load("visualization", '1', {packages:['corechart', 'table']});
+google.setOnLoadCallback(ready);
+
+function ready() {
+  var query = new google.visualization.Query(
+      'https://docs.google.com/a/google.com/spreadsheets/d/1weu20sjLNYtDFjpWSiixog82f0EWJ5HcNR0jUEfcnfE/gviz/tq?gid=60973023');
+  query.setQuery('select A');
+  query.send(function(e) {
+    var tests = e.getDataTable().getDistinctValues(0).map(function(name) {
+      return /(^|\/|_)([^_/]+?)(\.html)?$/.exec(name)[2];
+    }).sort().reduce(function(result, value) {
+      if (value != result[result.length - 1]) {
+        result.push(value);
+      }
+      return result;
+    }, []).forEach(function(test) {
+      var option = document.createElement('option');
+      option.textContent = test;
+      select.appendChild(option);
+    })
+  });
+
+  select.onchange = function(e) {
+    var query = new google.visualization.Query(
+        'https://docs.google.com/a/google.com/spreadsheets/d/1weu20sjLNYtDFjpWSiixog82f0EWJ5HcNR0jUEfcnfE/gviz/tq?gid=60973023');
+    query.setQuery('select B, G where A like "%' + e.target.value + '%"');
+    query.send(function(response) {
+      var data = response.getDataTable();
+      var view = new google.visualization.DataView(data);
+      view.setColumns([{calc: function(data, row) { return data.getFormattedValue(row, 0); }, type:'string'}, 1]);
+      var chart = new google.visualization.SteppedAreaChart(target);
+      chart.draw(view, { legend: { position: 'none' }, /*vAxis: {logScale: true},*/ animation: {duration: 500} });
+    });
+  }
+  onkeypress = function(e) {
+    if (e.keyCode == 106) {
+      select.selectedIndex++;
+      select.onchange({target: select});
+    } else if (e.keyCode == 107) {
+      select.selectedIndex--;
+      select.onchange({target: select});
+    }
+  }
+}
+</script>
+
+<style>
+body {
+  display: flex;
+  flex-flow: column;
+}
+#target {
+  flex-grow: 1;
+}
+</style>
+<div id='target'></div>
+<select id='select'></select>
