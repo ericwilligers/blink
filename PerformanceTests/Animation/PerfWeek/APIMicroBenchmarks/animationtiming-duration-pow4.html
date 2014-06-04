@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var timing;
+var duration;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests setting and getting Animation.timing.duration in the Web Animations API.",
+    setup: function() {
+        timing = new Animation(target, []).timing;
+        if (timing.duration === undefined && timing.iterationDuration === undefined) {
+            throw "ImNotTestingThis";
+        }
+    },
+    run: function() {
+        if (timing.duration === undefined) {
+            for (var i = 0; i < 10000; i++) {
+                timing.iterationDuration = i;
+                duration = timing.iterationDuration;
+            }
+        } else {
+            for (var i = 0; i < 10000; i++) {
+                if(i % 5 == 0)
+                    timing.duration = "auto";
+                else
+                    timing.duration = i;
+                duration = timing.duration;
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>
