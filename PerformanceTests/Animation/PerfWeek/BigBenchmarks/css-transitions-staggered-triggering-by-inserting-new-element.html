@@ -3,7 +3,7 @@
 <container id="container"></container>
 <script>
 var N = 1000;
-var staggerInterval = 1000;
+var duration = 1000;
 var stash = {SHOW: [], HIDE: []};
 var targets = [];
 
@@ -26,18 +26,16 @@ function startTransition(target, fastForward) {
 }
 
 requestAnimationFrame(function(time) {
-  var staggerStartTime = time - staggerInterval;
-  var i = 0;
+  measurementReady = true;
+  var startTime = time - duration;
+  var step = 0;
 
   function staggeredStart(time) {
-    var staggerTime = time - staggerStartTime;
-    for (; i < N && i < N * staggerTime / staggerInterval; i++) {
-      startTransition(targets[i], staggerTime - (i / N * staggerInterval));
-    }
-    if (staggerTime >= staggerInterval) {
-      measurementReady = true;
-      i = 0;
-      staggerStartTime = time - (staggerTime % staggerInterval);
+    var elapsed = time - startTime;
+    var targetStep = N * elapsed / duration;
+    step = Math.max(targetStep - N, step);
+    for (; step < targetStep; step++) {
+      startTransition(targets[step % N], elapsed - (step / N * duration));
     }
     requestAnimationFrame(staggeredStart);
   }
