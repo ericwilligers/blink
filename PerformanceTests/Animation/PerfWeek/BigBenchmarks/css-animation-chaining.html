@@ -1,0 +1,49 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+  target.addEventListener('webkitAnimationEnd', function(e) {
+    e.target.classList.toggle('anim');
+  });
+}
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  -webkit-animation: anim1 1s;
+}
+target.anim {
+  -webkit-animation: anim2 1s;
+}
+@-webkit-keyframes anim1 {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@-webkit-keyframes anim2 {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>
