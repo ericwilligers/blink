@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="element"></div>
+<script>
+var element;
+var keyframes;
+var players;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests Animation constructor in the Web Animations API with double timing and many keyframes.",
+    setup: function() {
+        element = document.getElementById('element');
+        keyframes = [
+            {opacity: '0', offset: 0},
+            {opacity: '1', offset: 0.1},
+            {opacity: '0', offset: 0.2},
+            {opacity: '1', offset: 0.3},
+            {opacity: '0', offset: 0.4},
+            {opacity: '1', offset: 0.5},
+            {opacity: '0', offset: 0.6},
+            {opacity: '1', offset: 0.7},
+            {opacity: '0', offset: 0.8},
+            {opacity: '1', offset: 0.9},
+            {opacity: '0', offset: 1.0}
+        ];
+        players = [];
+        if (window.GCController)
+            window.GCController.collect();
+    },
+    run: function() {
+        for (var i = 0; i < 100; i++) {
+            players.push(new Animation(element, keyframes, 2000000));
+}}});
+</script>
+</body>
+</html>

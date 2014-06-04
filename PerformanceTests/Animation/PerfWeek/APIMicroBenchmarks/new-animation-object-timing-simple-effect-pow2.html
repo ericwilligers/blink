@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="element"></div>
+<script>
+var element;
+var keyframes;
+var players;
+var timing;
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests Animation constructor in the Web Animations API with object timing and simple effect.",
+    setup: function() {
+        element = document.getElementById('element');
+        keyframes = [
+            { opacity: 0, offset: 0 },
+            { opacity: 1, offset: 1 }
+        ];
+        players = [];
+        timing = { duration: 2000000 };
+        if (window.GCController)
+            window.GCController.collect();
+    },
+    run: function() {
+        for (var i = 0; i < 100; i++) {
+            players.push(new Animation(element, keyframes, timing));
+}}});
+</script>
+</body>
+</html>
