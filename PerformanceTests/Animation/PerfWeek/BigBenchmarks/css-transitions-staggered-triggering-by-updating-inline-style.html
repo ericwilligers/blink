@@ -27,7 +27,7 @@ requestAnimationFrame(function(time) {
 
   function staggeredStart(time) {
     var elapsed = time - startTime;
-    var targetStep = N * elapsed / duration;
+    var targetStep = Math.floor(N * elapsed / duration);
     step = Math.max(targetStep - N, step);
     for (; step < targetStep; step++) {
       startTransition(targets[step % N], elapsed - (step / N * duration));
