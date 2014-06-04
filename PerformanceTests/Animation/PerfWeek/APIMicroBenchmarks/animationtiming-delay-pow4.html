@@ -9,7 +9,8 @@ var delay;
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests setting and getting Animation.timing.delay in the Web Animations API.",
     setup: function() {
-        timing = new Animation(target, []).timing;
+        var animation = new Animation(target, []);
+        timing = animation.timing || animation.specified;
         if (timing.delay === undefined && timing.startDelay === undefined) {
             throw "ImNotTestingThis";
         }

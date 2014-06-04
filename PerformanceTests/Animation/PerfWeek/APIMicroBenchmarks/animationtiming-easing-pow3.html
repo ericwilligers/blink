@@ -10,7 +10,8 @@ var easings = ["linear", "ease", "steps(5, end)", "step-start", "cubic-bezier(1,
 PerfTestRunner.measureRunsPerSecond({
     description: "This benchmark tests setting and getting Animation.timing.easing in the Web Animations API.",
     setup: function() {
-        timing = new Animation(target, []).timing;
+        var animation = new Animation(target, []);
+        timing = animation.timing || animation.specified;
         if (timing.easing === undefined && timing.timingFunction === undefined) {
             throw "ImNotTestingThis";
         }
