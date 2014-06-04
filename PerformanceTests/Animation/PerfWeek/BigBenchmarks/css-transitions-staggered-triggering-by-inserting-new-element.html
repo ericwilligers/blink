@@ -1,0 +1,78 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+var stash = {SHOW: [], HIDE: []};
+var targets = [];
+
+for (var i = 0; i < N; i++) {
+  stash.HIDE.push(document.createElement('hide'));
+
+  var show = document.createElement('show');
+  container.appendChild(show);
+
+  var target = document.createElement('target');
+  target._transitionEndTime = -i / N * duration;
+  container.appendChild(target);
+  targets.push(target);
+}
+
+function triggerTransition(target, fastForward) {
+  var state = target.previousSibling;
+  stash[state.tagName].push(state);
+  state.remove();
+  var newState = state.tagName == 'SHOW' ? stash.HIDE.pop() : stash.SHOW.pop();
+  container.insertBefore(newState, target);
+  target.style.transitionDelay = -fastForward + 'ms';
+}
+
+function frame(time) {
+  targets.forEach(function(target) {
+    var newStartTime = null;
+    while (target._transitionEndTime <= time) {
+      newStartTime = target._transitionEndTime;
+      target._transitionEndTime += duration;
+    }
+    if (newStartTime !== null) {
+      triggerTransition(target, time - newStartTime);
+    }
+  });
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: opacity 1000ms;
+}
+show + target {
+  opacity: 1;
+}
+hide + target {
+  opacity: 0;
+}
+show, hide {
+  display: none;
+}
+</style>
