@@ -3,32 +3,36 @@
 <container id="container"></container>
 <script>
 var N = 1000;
+var duration = 1000;
+
+function startAnimation(element, delay) {
+  target.animate([
+    {opacity: 0},
+    {opacity: 1}
+  ], {
+    duration: duration,
+    iterations: Infinity,
+    delay: delay
+  });
+}
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
   container.appendChild(target);
+  startAnimation(target, i * (duration/N));
 }
 
-var style = document.createElement('style');
-style.textContent = '\
-target {\
-  display: inline-block;\
-  width: 9px; height: 9px;\
-  background: orange;\
-  -webkit-animation: anim 1s infinite;\
-}\n\
-@-webkit-keyframes anim {\
-  0% { opacity: 0; }\
-  100% { opacity: 1; }\
-}';
-container.appendChild(style);
-
-requestAnimationFrame(function() {
+setTimeout(function() {
   measurementReady = true;
-});
+}, duration);
 </script>
 
 <style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
 body {
   margin: 0;
   overflow: hidden;
