@@ -19,12 +19,12 @@ function startAnimation(element, delay) {
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
   container.appendChild(target);
-  startAnimation(target, i * (duration/N));
+  startAnimation(target, -i * (duration/N));
 }
 
-setTimeout(function() {
+requestAnimationFrame(function() {
   measurementReady = true;
-}, duration);
+});
 </script>
 
 <style>
