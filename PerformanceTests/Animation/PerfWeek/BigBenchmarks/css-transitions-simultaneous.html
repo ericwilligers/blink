@@ -3,36 +3,31 @@
 <container id="container"></container>
 <script>
 var N = 1000;
-var duration = 1000;
-
-function startAnimation(element, delay) {
-  target.animate([
-    {opacity: 0},
-    {opacity: 1}
-  ], {
-    duration: duration,
-    iterations: Infinity,
-    delay: delay
-  });
-}
+var targets = [];
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
   container.appendChild(target);
-  startAnimation(target, i * (duration/N));
+  targets.push(target);
 }
 
+var classNumber = 0;
+function triggerTransition() {
+  classNumber = (classNumber + 1) % 2;
+  var className = 'class' + classNumber;
+  targets.forEach(function(target) {
+    target.className = className;
+  });
+}
+setInterval(triggerTransition, 1000);
+
 requestAnimationFrame(function() {
+  triggerTransition();
   measurementReady = true;
 });
 </script>
 
 <style>
-target {
-  display: inline-block;
-  width: 9px; height: 9px;
-  background: orange;
-}
 body {
   margin: 0;
   overflow: hidden;
@@ -43,5 +38,17 @@ container {
   width: 550px;
   height: 800px;
   background: magenta;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  transition: opacity 1s ease-in;
+}
+.class0 {
+  opacity: 0;
+}
+.class1 {
+  opacity: 1;
 }
 </style>
