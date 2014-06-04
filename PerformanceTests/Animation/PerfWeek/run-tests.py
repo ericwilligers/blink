@@ -11,13 +11,14 @@ import time
 import urllib
 import urllib2
 
-apk_server = 'http://pony.syd:8115/apks/'
+apk_server = 'http://ned.syd:8115/apks/'
+run_benchmark_path = os.path.abspath('../../../../../tools/perf/run_benchmark')
 
 if os.system('adb version &> /dev/null') != 0:
   sys.exit('adb is not in path')
 
-if os.system('./tools/perf/run_benchmark --help &> /dev/null') != 0:
-  sys.exit('cant find ./tools/perf/run_benchmark, are you in chromium/src?')
+if os.system(run_benchmark_path + ' --help &> /dev/null') != 0:
+  sys.exit('cant find run_benchmark, are you in PerformanceTests/Animation/PerfWeek?')
 
 def get_apks():
   index = urllib2.urlopen(apk_server).read()
@@ -63,14 +64,22 @@ def run_tests(apks, page_filter):
     os.system('adb install -r %s &> /dev/null' % apk_file)
     os.remove(apk_file)
 
-    os.system("tools/perf/run_benchmark --reset-results --browser=android-content-shell blink_perf.animation --page-filter='%s' &> /dev/null" % page_filter)
     out_file = os.path.join(out_dir, '%s-%s-%s-%s.html' % (revision, user, serial, i))
-    shutil.move('tools/perf/results.html', out_file)
+    subprocess.call([
+      run_benchmark_path,
+      'blink_perf.animation',
+      '--browser=android-content-shell',
+      '--reset-results',
+      '--page-filter=%s' % page_filter,
+      '--output=%s' % out_file,
+    ])
 
     # FIXME: upload results from out_file
     remaining = (time.time() - start) * (len(apks) - i + 1)
     remaining = datetime.timedelta(0, remaining)
     print '%d of %d - %s - %s remaining' % (i + 1, len(apks), out_file, remaining)
+  print 'Results stored in %s' % out_dir
+  print 'To upload the results run: ./upload-results.py %s/*' % out_dir
 
 base_date = datetime.date(1, 1, 1)
 def use_apk_for_api_test(apk):
