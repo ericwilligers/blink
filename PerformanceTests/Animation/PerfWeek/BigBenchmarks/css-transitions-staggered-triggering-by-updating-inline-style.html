@@ -1,0 +1,61 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var staggerInterval = 1000;
+var targets = [];
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  target._opacity = 1;
+  target.style.opacity = target._opacity;
+  container.appendChild(target);
+  targets.push(target);
+}
+
+function startTransition(target, fastForward) {
+  target._opacity ^= 1;
+  target.style.opacity = target._opacity;
+  target.style.transitionDelay = -fastForward + 'ms';
+}
+
+requestAnimationFrame(function(time) {
+  var staggerStartTime = time - staggerInterval;
+  var i = 0;
+
+  function staggeredStart(time) {
+    var staggerTime = time - staggerStartTime;
+    for (; i < N && i < N * staggerTime / staggerInterval; i++) {
+      startTransition(targets[i], staggerTime - (i / N * staggerInterval));
+    }
+    if (staggerTime >= staggerInterval) {
+      measurementReady = true;
+      i = 0;
+      staggerStartTime = time - (staggerTime % staggerInterval);
+    }
+    requestAnimationFrame(staggeredStart);
+  }
+  staggeredStart(time);
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: opacity 1000ms;
+}
+</style>
