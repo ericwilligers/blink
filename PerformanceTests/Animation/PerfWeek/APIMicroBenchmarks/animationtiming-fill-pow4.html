@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script src="../../../resources/runner.js"></script>
+<div id="target"></div>
+<script>
+var timing;
+var fill;
+var fills = ["forwards", "backwards", "none", "both", "auto"];
+PerfTestRunner.measureRunsPerSecond({
+    description: "This benchmark tests setting and getting Animation.timing.fill in the Web Animations API.",
+    setup: function() {
+        timing = new Animation(target, []).timing;
+        if (timing.fill === undefined && timing.fillMode === undefined) {
+            throw "ImNotTestingThis";
+        }
+    },
+    run: function() {
+        if (timing.fill === undefined) {
+            for (var i = 0; i < 10000; i++) {
+                timing.fillMode = fills[i % 5];
+                fill = timing.fillMode;
+            }
+        } else {
+            for (var i = 0; i < 10000; i++) {
+                timing.fill = fills[i % 5];
+                fill = timing.fill;
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>
