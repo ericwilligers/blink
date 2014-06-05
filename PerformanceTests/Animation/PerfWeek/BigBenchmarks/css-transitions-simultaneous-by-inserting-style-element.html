@@ -1,0 +1,47 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+var opacity = 1;
+var style = null;
+
+for (var i = 0; i < N; i++) {
+  container.appendChild(document.createElement('target'));
+}
+
+function startAllAnimations() {
+  opacity ^= 1;
+  if (style) {
+    style.remove();
+  }
+  style = document.createElement('style');
+  style.textContent = 'target { opacity: ' + opacity + '; }';
+  container.appendChild(style);
+}
+
+requestAnimationFrame(startAllAnimations);
+setInterval(startAllAnimations, duration);
+measurementReady = true;
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: opacity 1000ms linear;
+}
+</style>
