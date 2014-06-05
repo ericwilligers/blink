@@ -1,0 +1,62 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 10;
+var staggerTime = 1000;
+
+function startAnimation() {
+  var target = document.createElement('target');
+  target.i = 1;
+  container.appendChild(target);
+  target.addEventListener('webkitAnimationEnd', function(e) {
+    e.target.style.webkitAnimationName = 'anim' + (1 + e.target.i++ % 2);
+  });
+}
+
+requestAnimationFrame(function(t) {
+  var base = t;
+  var i = 0;
+
+  function staggeredStart(t) {
+    elapsed = t - base;
+    for (; i < N * elapsed / staggerTime; i++) {
+      startAnimation();
+    }
+    if (i < N) {
+      requestAnimationFrame(staggeredStart);
+    } else {
+      measurementReady = true;
+    }
+  }
+  requestAnimationFrame(staggeredStart);
+});
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  -webkit-animation: anim1 1s;
+}
+@-webkit-keyframes anim1 {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@-webkit-keyframes anim2 {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

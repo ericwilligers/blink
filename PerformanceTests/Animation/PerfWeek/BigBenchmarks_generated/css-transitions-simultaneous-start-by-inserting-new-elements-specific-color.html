@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width">
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: opacity 100s;
+}
+trigger + target {
+  color: pink;
+}
+</style>
+
+<container id="container"></container>
+
+<script>
+var N = 10;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+}
+
+requestAnimationFrame(function() {
+  [].forEach.call(container.querySelectorAll('target'), function(target) {
+    container.insertBefore(document.createElement('trigger'), target);
+  });
+  measurementReady = true;
+});
+</script>

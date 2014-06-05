@@ -1,0 +1,47 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 10;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+}
+
+var anim = 0;
+setInterval(function() {
+  anim++;
+  for (var i = 0; i < container.childNodes.length; i++) {
+    container.childNodes[i].style.webkitAnimationName = 'anim' + (1 + (i + anim) % 2);
+  }
+}, 1000);
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  -webkit-animation: anim1 1s;
+}
+@-webkit-keyframes anim1 {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+@-webkit-keyframes anim2 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

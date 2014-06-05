@@ -1,0 +1,79 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 10;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+}
+
+var count = 0;
+
+function setStyle(s) {
+  var style = document.createElement('style');
+  style.textContent = s + ' {\
+    display: inline-block;\
+    width: 9px; height: 9px;\
+    -webkit-animation: anim' + count + ' 1s linear;\
+    background: green;\
+    transform: rotate(360deg);\
+  }\n\
+  @-webkit-keyframes anim' + (count++) + ' {\
+    0% { transform: rotate(0deg); }\
+    100% { transform: rotate(360deg); }\
+  }';
+  container.appendChild(style);
+  return style;
+}
+
+var absoluteBaseTime, baseTime, baseN;
+
+requestAnimationFrame(function(t) {
+  absoluteBaseTime = t;
+  baseTime = t;
+  baseN = 0;
+  requestAnimationFrame(startAFractionOfTheAnimations);
+});
+
+var styleSheets = {};
+
+function startAFractionOfTheAnimations(t) {
+  if (t - absoluteBaseTime > 1000)
+    measurementReady = true;
+  diff = t - baseTime;
+  baseTime = t;
+  diff = Math.floor(diff/16.666 + 0.5);
+  diff = (baseN + diff) % 60;
+  s = '';
+  for (; baseN != diff; baseN = (baseN + 1) % 60) {
+    s += 'container target:nth-child(60n+'+baseN+'), ';
+    if (styleSheets[baseN] !== undefined) {
+      // Drop old style sheets to avoid N^2 explosion of rule resolution.
+      styleSheets[baseN].remove();
+      styleSheets[baseN] = undefined;
+    }
+  }
+  s = s.substring(0, s.length - 2)
+  var sheet = setStyle(s)
+  // Register style sheet at end of fraction so it can be dropped when it's no
+  // longer useful.
+  styleSheets[diff-1] = sheet;
+  requestAnimationFrame(startAFractionOfTheAnimations);
+}
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: black;
+}
+</style>

@@ -1,0 +1,58 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 10;
+var staggerTime = 1000;
+
+var targets = [];
+function startAnimation(i) {
+  if (!targets[i]) {
+    targets[i] = document.createElement('target');
+    container.appendChild(targets[i]);
+  }
+  targets[i].animate([
+    {opacity: '0'},
+    {opacity: '1'}
+  ], 1000);
+}
+
+requestAnimationFrame(function(t) {
+  var base = t;
+  var i = 0;
+
+  function staggeredStart(t) {
+    var elapsed = t - base;
+    for (; i < N && i < N * elapsed / staggerTime; i++) {
+      startAnimation(i);
+    }
+    if (elapsed > staggerTime) {
+      measurementReady = true;
+      i = 0;
+      base = t - (elapsed % staggerTime);
+      elapsed = 0;
+    }
+    requestAnimationFrame(staggeredStart);
+  }
+  requestAnimationFrame(staggeredStart);
+});
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

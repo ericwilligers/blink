@@ -1,0 +1,51 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 10;
+var targets = [];
+
+function startAnimation(element) {
+  element.animate([
+    {height: '20px'},
+    {height: '10px'}
+  ], 1000);
+}
+
+function startAllAnimations() {
+  for (var i in targets)
+    startAnimation(targets[i]);
+  setTimeout(startAllAnimations, 1000);
+}
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+  targets.push(target);
+}
+
+startAllAnimations();
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

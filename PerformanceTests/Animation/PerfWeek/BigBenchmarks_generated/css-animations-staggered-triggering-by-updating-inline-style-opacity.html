@@ -1,0 +1,68 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 10;
+var staggerTime = 1000;
+
+var targets = [];
+function startAnimation(i) {
+  if (targets[i]) {
+    targets[i].style.webkitAnimationName = 'anim' + (1 + targets[i].i++ % 2);
+    targets[i].classList.toggle('anim');
+    return;
+  }
+  var target = document.createElement('target');
+  target.i = 1;
+  container.appendChild(target);
+  targets[i] = target;
+}
+
+requestAnimationFrame(function(t) {
+  var base = t;
+  var i = 0;
+
+  function staggeredStart(t) {
+    var elapsed = t - base;
+    for (; i < N && i < N * elapsed / staggerTime; i++) {
+      startAnimation(i);
+    }
+    if (elapsed > staggerTime) {
+      measurementReady = true;
+      i = 0;
+      base = t - (elapsed % staggerTime);
+      elapsed = 0;
+    }
+    requestAnimationFrame(staggeredStart);
+  }
+  requestAnimationFrame(staggeredStart);
+});
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  -webkit-animation: anim1 1s;
+}
+@-webkit-keyframes anim1 {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@-webkit-keyframes anim2 {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>
