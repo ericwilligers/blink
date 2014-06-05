@@ -4,22 +4,27 @@
 <script>
 var N = 1000;
 var duration = 1000;
+var keyframeValues = [0, 1];
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
-  target._opacity = 0;
+  target._keyframe = 0;
   target.style.transitionDelay = (-i / N * duration) + 'ms';
   container.appendChild(target);
   target.addEventListener('transitionend', function(event) {
-    event.target._opacity ^= 1;
-    event.target.style.opacity = event.target._opacity;
+    event.target._keyframe ^= 1;
+    event.target.style.opacity = keyframeValues[event.target._keyframe];
     event.target.style.removeProperty('transition-delay');
   });
 }
 
 requestAnimationFrame(function() {
-  document.styleSheets[0].rules[2].style.opacity = 0;
-  measurementReady = true;
+  var styleRule = document.styleSheets[0].rules[2].style;
+  styleRule.opacity = keyframeValues[1];
+  requestAnimationFrame(function() {
+    styleRule.opacity = keyframeValues[0];
+    measurementReady = true;
+  });
 });
 </script>
 
@@ -39,6 +44,6 @@ target {
   display: inline-block;
   width: 9px; height: 9px;
   background: magenta;
-  transition: opacity linear 1000ms;
+  transition: opacity 1000ms linear;
 }
 </style>
