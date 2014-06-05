@@ -4,7 +4,7 @@
 <script>
 var N = 1000;
 var duration = 1000;
-var opacity = 1;
+var keyframe = 1;
 var targets = [];
 
 for (var i = 0; i < N; i++) {
@@ -14,15 +14,18 @@ for (var i = 0; i < N; i++) {
 }
 
 function startAllAnimations() {
-  opacity ^= 1;
+  keyframe ^= 1;
   targets.forEach(function(target) {
-    target.className = 'opacity' + opacity;
+    target.className = 'keyframe' + keyframe;
   });
 }
 
 requestAnimationFrame(startAllAnimations);
 setInterval(startAllAnimations, duration);
-measurementReady = true;
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
 </script>
 
 <style>
@@ -43,10 +46,10 @@ target {
   background: magenta;
   transition: opacity 1000ms linear;
 }
-.opacity0 {
+.keyframe0 {
   opacity: 0;
 }
-.opacity1 {
+.keyframe1 {
   opacity: 1;
 }
 </style>

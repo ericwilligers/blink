@@ -3,26 +3,34 @@
 <container id="container"></container>
 <script>
 var N = 1000;
+var duration = 1000;
 var targets = [];
+var triggers = [];
 
 for (var i = 0; i < N; i++) {
+  triggers.push(document.createElement('trigger'));
   var target = document.createElement('target');
   container.appendChild(target);
   targets.push(target);
 }
 
-var classNumber = 0;
-function triggerTransition() {
-  classNumber = (classNumber + 1) % 2;
-  var className = 'class' + classNumber;
-  targets.forEach(function(target) {
-    target.className = className;
+function startAllTransitions() {
+  requestAnimationFrame(function() {
+    targets.forEach(function(target, i) {
+      container.insertBefore(triggers[i], target);
+    });
+    requestAnimationFrame(function() {
+      triggers.forEach(function(trigger) {
+        trigger.remove();
+      })
+    });
   });
 }
-setInterval(triggerTransition, 1000);
+
+startAllTransitions();
+setInterval(startAllTransitions, duration);
 
 requestAnimationFrame(function() {
-  triggerTransition();
   measurementReady = true;
 });
 </script>
@@ -37,18 +45,21 @@ container {
   flex-flow: row wrap;
   width: 550px;
   height: 800px;
-  background: magenta;
+  background: lightgoldenrodyellow;
 }
+
 target {
   display: inline-block;
   width: 9px; height: 9px;
-  background: orange;
-  transition: opacity 1s ease-in;
-}
-.class0 {
+  background: magenta;
+  transition: opacity 1000ms linear;
   opacity: 0;
 }
-.class1 {
+trigger + target {
+  transition: none;
   opacity: 1;
+}
+trigger {
+  display: none;
 }
 </style>

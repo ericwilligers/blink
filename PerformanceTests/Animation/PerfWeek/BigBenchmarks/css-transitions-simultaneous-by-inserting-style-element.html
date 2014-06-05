@@ -4,26 +4,30 @@
 <script>
 var N = 1000;
 var duration = 1000;
-var opacity = 1;
 var style = null;
+var keyframe = 1;
+var keyframeValues = [0, 1]
 
 for (var i = 0; i < N; i++) {
   container.appendChild(document.createElement('target'));
 }
 
 function startAllAnimations() {
-  opacity ^= 1;
+  keyframe ^= 1;
   if (style) {
     style.remove();
   }
   style = document.createElement('style');
-  style.textContent = 'target { opacity: ' + opacity + '; }';
+  style.textContent = 'target { opacity: ' + keyframeValues[keyframe] + '; }';
   container.appendChild(style);
 }
 
 requestAnimationFrame(startAllAnimations);
 setInterval(startAllAnimations, duration);
-measurementReady = true;
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
 </script>
 
 <style>

@@ -4,8 +4,9 @@
 <script>
 var N = 1000;
 var duration = 1000;
-var opacity = 1;
 var targets = [];
+var keyframe = 1;
+var keyframeValues = [0, 1]
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
@@ -14,15 +15,18 @@ for (var i = 0; i < N; i++) {
 }
 
 function startAllAnimations() {
-  opacity ^= 1;
+  keyframe ^= 1;
   targets.forEach(function(target) {
-    target.style.opacity = opacity;
+    target.style.opacity = keyframeValues[keyframe];
   });
 }
 
 requestAnimationFrame(startAllAnimations);
 setInterval(startAllAnimations, duration);
-measurementReady = true;
+
+requestAnimationFrame(function() {
+  measurementReady = true;
+});
 </script>
 
 <style>
