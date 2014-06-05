@@ -1,0 +1,55 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+var keyframeValues = [0, 1];
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  target._keyframe = 0;
+  target.style.transitionDelay = (-i / N * duration) + 'ms';
+  container.appendChild(target);
+  target.addEventListener('transitionend', function(event) {
+    event.target._keyframe ^= 1;
+    event.target.className = 'keyframe' + event.target._keyframe;
+    event.target.style.removeProperty('transition-delay');
+  });
+}
+
+requestAnimationFrame(function() {
+  var styleRule = document.styleSheets[0].rules[2].style;
+  styleRule.opacity = keyframeValues[1];
+  requestAnimationFrame(function() {
+    styleRule.opacity = keyframeValues[0];
+    measurementReady = true;
+  });
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: opacity 1000ms linear;
+}
+.keyframe0 {
+  opacity: 0;
+}
+.keyframe1 {
+  opacity: 1;
+}
+</style>
