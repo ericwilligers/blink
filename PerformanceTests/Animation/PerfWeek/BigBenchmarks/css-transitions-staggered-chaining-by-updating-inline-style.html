@@ -11,11 +11,13 @@ for (var i = 0; i < N; i++) {
   target._keyframe = 0;
   target.style.transitionDelay = (-i / N * duration) + 'ms';
   container.appendChild(target);
-  target.addEventListener('transitionend', function(event) {
-    event.target._keyframe ^= 1;
-    event.target.style.opacity = keyframeValues[event.target._keyframe];
-    event.target.style.removeProperty('transition-delay');
-  });
+  target.addEventListener('transitionend', restartTransition);
+}
+
+function restartTransition(event) {
+  event.target._keyframe ^= 1;
+  event.target.style.opacity = keyframeValues[event.target._keyframe];
+  event.target.style.removeProperty('transition-delay');
 }
 
 requestAnimationFrame(function() {
