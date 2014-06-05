@@ -3,65 +3,66 @@
 <container id="container"></container>
 <script>
 var N = 500;
+var duration = 1000;
+var targets = [];
+var styles = [];
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
   container.appendChild(target);
+  targets.push(target);
 }
 
-var count = 0;
-
-function setStyle(s) {
-  var style = document.createElement('style');
-  style.textContent = s + ' {\
-    display: inline-block;\
-    width: 9px; height: 9px;\
-    -webkit-animation: anim' + count + ' 1s linear;\
-    background: green;\
-    opacity: 0;\
-  }\n\
-  @-webkit-keyframes anim' + (count++) + ' {\
-    0% { opacity: 1; }\
-    100% { opacity: 0.4; }\
-  }';
-  container.appendChild(style);
-  return style;
-}
-
-var absoluteBaseTime, baseTime, baseN;
-
-requestAnimationFrame(function(t) {
-  absoluteBaseTime = t;
-  baseTime = t;
-  baseN = 0;
-  requestAnimationFrame(startAFractionOfTheAnimations);
-});
-
-var styleSheets = {};
-
-function startAFractionOfTheAnimations(t) {
-  if (t - absoluteBaseTime > 1000)
-    measurementReady = true;
-  diff = t - baseTime;
-  baseTime = t;
-  diff = Math.floor(diff/16.666 + 0.5);
-  diff = (baseN + diff) % 60;
-  s = '';
-  for (; baseN != diff; baseN = (baseN + 1) % 60) {
-    s += 'container target:nth-child(60n+'+baseN+'), ';
-    if (styleSheets[baseN] !== undefined) {
-      // Drop old style sheets to avoid N^2 explosion of rule resolution.
-      styleSheets[baseN].remove();
-      styleSheets[baseN] = undefined;
-    }
+function addNewAnimationStyle(step) {
+  // Clean up overwritten styles.
+  var i = 0;
+  for (; i < styles.length && styles[i].lastStep < step; i++) {
+    styles[i].style.remove();
   }
-  s = s.substring(0, s.length - 2)
-  var sheet = setStyle(s)
-  // Register style sheet at end of fraction so it can be dropped when it's no
-  // longer useful.
-  styleSheets[diff-1] = sheet;
-  requestAnimationFrame(startAFractionOfTheAnimations);
+  styles.splice(0, i);
+
+  var style = document.createElement('style');
+  var animationName = 'anim' + step;
+  style.textContent = '@keyframes ' + animationName + ' { 0% { opacity: 0; } 100% { opacity: 1; } }';
+  container.appendChild(style);
+  styles.push({
+    style: style,
+    lastStep: step + N,
+  });
+
+  return animationName;
 }
+
+function startAnimations(startingTargets, startStep, endStep) {
+  var newAnimationName = addNewAnimationStyle(startStep, endStep);
+  startingTargets.forEach(function(startInfo) {
+    startInfo.target.style.animationName = newAnimationName;
+    startInfo.target.style.animationDelay = -startInfo.fastForward + 'ms';
+  });
+}
+
+requestAnimationFrame(function(time) {
+  measurementReady = true;
+  var startTime = time - duration;
+  var previousStep = 0;
+
+  function staggeredStart(time) {
+    var elapsed = time - startTime;
+    var targetStep = Math.floor(N * elapsed / duration);
+    var restartingTargets = [];
+    for (var step = Math.max(targetStep - N, previousStep); step < targetStep; step++) {
+      var stepStartTime = step / N * duration;
+      restartingTargets.push({
+        target: targets[step % N],
+        fastForward: elapsed - stepStartTime,
+      });
+    }
+    startAnimations(restartingTargets, targetStep);
+    previousStep = targetStep;
+    requestAnimationFrame(staggeredStart);
+  }
+  staggeredStart(time);
+});
 </script>
 
 <style>
@@ -74,6 +75,12 @@ container {
   flex-flow: row wrap;
   width: 550px;
   height: 800px;
-  background: black;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  animation: 1000ms linear;
 }
 </style>
