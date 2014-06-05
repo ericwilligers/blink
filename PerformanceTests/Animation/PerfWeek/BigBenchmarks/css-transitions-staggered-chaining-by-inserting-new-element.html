@@ -28,6 +28,7 @@ function restartTransition(event) {
   container.insertBefore(keyframeStash[target._keyframe].pop(), target);
 }
 
+var measurementReady = false;
 requestAnimationFrame(function() {
   requestAnimationFrame(function() {
     targets.forEach(function(target) {

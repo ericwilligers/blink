@@ -20,6 +20,7 @@ function restartTransition(event) {
   event.target.style.removeProperty('transition-delay');
 }
 
+var measurementReady = false;
 requestAnimationFrame(function() {
   var styleRule = document.styleSheets[0].rules[2].style;
   styleRule.opacity = keyframeValues[1];

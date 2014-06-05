@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
-var N = 1000;
+var N = 500;
 var duration = 1000;
 var keyframeValues = [0, 1];
 var id = 0;
@@ -33,6 +33,7 @@ function addNewIDStyle(target) {
   target._currentIDStyle = style;
 }
 
+var measurementReady = false;
 requestAnimationFrame(function() {
   var styleRule = document.styleSheets[0].rules[2].style;
   styleRule.opacity = keyframeValues[1];
