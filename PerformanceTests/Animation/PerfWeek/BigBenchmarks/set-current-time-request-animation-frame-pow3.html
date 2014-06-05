@@ -2,7 +2,9 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = false;
 var N = 1000;
+var duration = 1000;
 var players = [];
 var prevTime = null;
 
@@ -12,10 +14,10 @@ for (var i = 0; i < N; i++) {
 
   var animation = new Animation(target, [
     {opacity: '0.0'},
-    {opacity: '1.0'}
+    {opacity: '1.0'},
   ], {
-    duration: 1000,
-    iterations: Infinity
+    duration: duration,
+    iterations: Infinity,
   });
   var player = document.timeline.play(animation);
   player.pause();

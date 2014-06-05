@@ -2,7 +2,9 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = true;
 var N = 1000;
+var duration = 1000;
 
 function startAnimation() {
   var target = document.createElement('target');
@@ -17,7 +19,7 @@ function startAllAnimations() {
 }
 
 startAllAnimations();
-setInterval(startAllAnimations, 1000);
+setInterval(startAllAnimations, duration);
 </script>
 
 <style>
