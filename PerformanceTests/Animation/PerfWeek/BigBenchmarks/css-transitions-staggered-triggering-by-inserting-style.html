@@ -6,9 +6,11 @@ var N = 1000;
 var duration = 1000;
 var targets = [];
 var styles = [];
+var keyframeValues = [0, 1];
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
+  target._keyframe = 0;
   container.appendChild(target);
   targets.push(target);
 }
@@ -22,8 +24,9 @@ function addNewClassStyle(step) {
   styles.splice(0, i);
 
   var style = document.createElement('style');
-  var className = 'class' + step;
-  style.textContent = '.' + className + ' { opacity: ' + Math.random() + '; }';
+  var className = 'style' + step + 'keyframe';
+  style.textContent = '.' + className + '0 { opacity: ' + keyframeValues[0] + '; }\n';
+  style.textContent += '.' + className + '1 { opacity: ' + keyframeValues[1] + '; }\n';
   container.appendChild(style);
   styles.push({
     style: style,
@@ -36,7 +39,8 @@ function addNewClassStyle(step) {
 function startTransitions(startingTargets, startStep, endStep) {
   var newClassName = addNewClassStyle(startStep, endStep);
   startingTargets.forEach(function(startInfo) {
-    startInfo.target.className = newClassName;
+    startInfo.target._keyframe ^= 1;
+    startInfo.target.className = newClassName + startInfo.target._keyframe;
     startInfo.target.style.transitionDelay = -startInfo.fastForward + 'ms';
   });
 }

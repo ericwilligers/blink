@@ -8,15 +8,15 @@ var targets = [];
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
-  target._opacity = 1;
-  target.className = 'opacity' + target._opacity;
+  target._keyframe = 1;
+  target.className = 'keyframe' + target._keyframe;
   container.appendChild(target);
   targets.push(target);
 }
 
 function startTransition(target, fastForward) {
-  target._opacity ^= 1;
-  target.className = 'opacity' + target._opacity;
+  target._keyframe ^= 1;
+  target.className = 'keyframe' + target._keyframe;
   target.style.transitionDelay = -fastForward + 'ms';
 }
 
@@ -54,12 +54,12 @@ target {
   display: inline-block;
   width: 9px; height: 9px;
   background: magenta;
-  transition: opacity 1000ms;
+  transition: opacity 1000ms linear;
 }
-.opacity0 {
+.keyframe0 {
   opacity: 0;
 }
-.opacity1 {
+.keyframe1 {
   opacity: 1;
 }
 </style>
