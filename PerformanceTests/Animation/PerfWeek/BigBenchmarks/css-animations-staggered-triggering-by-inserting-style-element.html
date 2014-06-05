@@ -23,7 +23,7 @@ function addNewAnimationStyle(step) {
 
   var style = document.createElement('style');
   var animationName = 'anim' + step;
-  style.textContent = '@keyframes ' + animationName + ' { 0% { opacity: 0; } 100% { opacity: 1; } }';
+  style.textContent = '@-webkit-keyframes ' + animationName + ' { 0% { opacity: 0; } 100% { opacity: 1; } }';
   container.appendChild(style);
   styles.push({
     style: style,
@@ -81,6 +81,6 @@ target {
   display: inline-block;
   width: 9px; height: 9px;
   background: magenta;
-  animation: 1000ms linear;
+  -webkit-animation: 1000ms linear;
 }
 </style>
