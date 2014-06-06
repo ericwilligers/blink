@@ -2,7 +2,6 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
-var measurementReady = false;
 var N = 1000;
 var duration = 1000;
 
@@ -27,7 +26,7 @@ target {\
 container.appendChild(style);
 
 requestAnimationFrame(function() {
-  measurementReady = true;
+  window.measurementReady = true;
 });
 </script>
 

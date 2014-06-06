@@ -1,8 +1,8 @@
 <!doctype html>
 <meta name="viewport" content="width=device-width, user-scalable=no">
+<script src="resources/web-animations-api-check.js"></script>
 <container id="container"></container>
 <script>
-var measurementReady = false;
 var N = 1000;
 var duration = 1000;
 
@@ -34,7 +34,7 @@ requestAnimationFrame(function(t) {
     if (i < N) {
       requestAnimationFrame(staggeredStart);
     } else {
-      measurementReady = true;
+      window.measurementReady = true;
     }
   }
   requestAnimationFrame(staggeredStart);

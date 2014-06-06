@@ -16,7 +16,7 @@ class PerfWeekPage(Page):
 
   def RunNavigateSteps(self, action_runner):
     action_runner.NavigateToPage(self)
-    action_runner.RunAction(WaitAction({"javascript": "measurementReady"}))
+    action_runner.RunAction(WaitAction({"javascript": "window.measurementReady"}))
 
   def RunSmoothness(self, action_runner):
     action_runner.RunAction(WaitAction({"seconds": 10}))
