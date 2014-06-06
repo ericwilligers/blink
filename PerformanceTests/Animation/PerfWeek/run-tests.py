@@ -12,13 +12,9 @@ import urllib
 import urllib2
 
 apk_server = 'http://ned.syd:8115/apks/'
-run_benchmark_path = os.path.abspath('../../../../../tools/perf/run_benchmark')
-
-if os.system('adb version &> /dev/null') != 0:
-  sys.exit('adb is not in path')
-
-if os.system(run_benchmark_path + ' --help &> /dev/null') != 0:
-  sys.exit('cant find run_benchmark, are you in PerformanceTests/Animation/PerfWeek?')
+run_micro_benchmark_command = [os.path.abspath('../../../../../tools/perf/run_benchmark'), 'blink_perf.animation']
+run_macro_benchmark_command = [os.path.abspath('./run-big-benchmarks.py')]
+macro_benchmark_flag = '--big'
 
 def get_apks():
   index = urllib2.urlopen(apk_server).read()
@@ -46,7 +42,7 @@ def get_user():
 def get_serial():
   return subprocess.Popen(['adb', 'get-serialno'], stdout=subprocess.PIPE).communicate()[0].rstrip()
 
-def run_tests(apks, page_filter):
+def run_tests(command, apks, page_filter):
   os.system('adb wait-for-device')
   print 'starting, %d revisions to test' % len(apks)
 
@@ -65,9 +61,7 @@ def run_tests(apks, page_filter):
     os.remove(apk_file)
 
     out_file = os.path.join(out_dir, '%s-%s-%s-%s.html' % (revision, user, serial, i))
-    subprocess.call([
-      run_benchmark_path,
-      'blink_perf.animation',
+    subprocess.call(command + [
       '--browser=android-content-shell',
       '--reset-results',
       '--page-filter=%s' % page_filter,
@@ -90,8 +84,25 @@ def use_apk_for_css_test(apk):
   date = apk_date(apk)
   return ((date - base_date).days % 7) == 0
 
-# FIXME: add a flag to switch predicates
-predicate = use_apk_for_api_test
-apks = [apk for apk in get_daily_apks() if predicate(apk)]
-page_filter = sys.argv[1]
-run_tests(apks, page_filter)
+def main():
+  if os.system('adb version &> /dev/null') != 0:
+    sys.exit('adb is not in path')
+
+  if os.system(run_micro_benchmark_command[0] + ' --help &> /dev/null') != 0:
+    sys.exit('cant find run_benchmark, are you in PerformanceTests/Animation/PerfWeek?')
+
+  # FIXME: add a flag to switch predicates
+  predicate = use_apk_for_api_test
+  apks = [apk for apk in get_daily_apks() if predicate(apk)]
+  if macro_benchmark_flag in sys.argv:
+    sys.argv.remove(macro_benchmark_flag)
+    command = run_macro_benchmark_command
+  else:
+    command = run_micro_benchmark_command
+  if len(sys.argv) < 2:
+    sys.exit('Usage: %s [--big] page_filter_args' % sys.argv[0])
+  page_filter = sys.argv[1]
+  run_tests(command, apks, page_filter)
+
+if __name__ == '__main__':
+  main()
