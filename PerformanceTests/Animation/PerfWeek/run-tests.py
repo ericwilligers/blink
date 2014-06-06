@@ -100,7 +100,7 @@ def main():
   else:
     command = run_micro_benchmark_command
   if len(sys.argv) < 2:
-    sys.exit('Usage: %s [--big] page_filter_args' % sys.argv[0])
+    sys.exit('Usage: %s [%s] page_filter_args' % (sys.argv[0], macro_benchmark_flag))
   page_filter = sys.argv[1]
   run_tests(command, apks, page_filter)
 
