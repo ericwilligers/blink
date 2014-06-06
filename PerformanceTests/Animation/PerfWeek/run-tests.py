@@ -53,6 +53,7 @@ def run_tests(apks, page_filter):
   user = get_user()
   serial = get_serial()
   out_dir = tempfile.mkdtemp()
+  print 'Storing results in %s' % out_dir
 
   for i, apk in enumerate(apks):
     start = time.time()
