@@ -2,20 +2,22 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = false;
 var N = 1000;
+var duration = 1000;
 var targets = [];
 
 function startAnimation(element) {
   element.animate([
     {opacity: 0},
-    {opacity: 1}
-  ], 1000);
+    {opacity: 1},
+  ], duration);
 }
 
 function startAllAnimations() {
   for (var i in targets)
     startAnimation(targets[i]);
-  setTimeout(startAllAnimations, 1000);
+  setTimeout(startAllAnimations, duration);
 }
 
 for (var i = 0; i < N; i++) {

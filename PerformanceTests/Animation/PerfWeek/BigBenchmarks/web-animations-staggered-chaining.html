@@ -2,14 +2,15 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = false;
 var N = 1000;
-var staggerTime = 1000;
+var duration = 1000;
 
 function startAnimation(element) {
   var player = element.animate([
     {opacity: 0},
-    {opacity: 1}
-  ], 1000);
+    {opacity: 1},
+  ], duration);
   player.onfinish = function() {
     startAnimation(element);
   }
@@ -27,7 +28,7 @@ requestAnimationFrame(function(t) {
 
   function staggeredStart(t) {
     elapsed = t - base;
-    for (; i < N * elapsed / staggerTime; i++) {
+    for (; i < N * elapsed / duration; i++) {
       addElement();
     }
     if (i < N) {

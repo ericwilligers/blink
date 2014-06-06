@@ -2,24 +2,25 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = false;
 var N = 1000;
 var duration = 1000;
 
 function startAnimation(element, delay) {
   target.animate([
     {opacity: 0},
-    {opacity: 1}
+    {opacity: 1},
   ], {
     duration: duration,
     iterations: Infinity,
-    delay: delay
+    delay: delay,
   });
 }
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
   container.appendChild(target);
-  startAnimation(target, -i * (duration/N));
+  startAnimation(target, -i * (duration / N));
 }
 
 requestAnimationFrame(function() {

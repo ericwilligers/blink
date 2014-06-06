@@ -2,8 +2,9 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = false;
 var N = 500;
-var staggerTime = 1000;
+var duration = 1000;
 
 function startAnimation() {
   var target = document.createElement('target');
@@ -47,7 +48,7 @@ requestAnimationFrame(function(t) {
 
   function staggeredStart(t) {
     elapsed = t - base;
-    for (; i < N * elapsed / staggerTime; i++) {
+    for (; i < N * elapsed / duration; i++) {
       startAnimation();
     }
     if (i < N) {

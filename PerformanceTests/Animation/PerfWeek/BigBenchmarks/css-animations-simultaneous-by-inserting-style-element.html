@@ -2,9 +2,11 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = true;
 var N = 1000;
+var duration = 1000;
+var style = null;
 
-var style;
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
   container.appendChild(target);
@@ -32,7 +34,7 @@ function updateStyle() {
 }
 
 updateStyle();
-//setInterval(updateStyle, 1000);
+setInterval(updateStyle, duration);
 </script>
 
 <style>

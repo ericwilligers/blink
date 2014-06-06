@@ -2,7 +2,9 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
+var measurementReady = true;
 var N = 1000;
+var duration = 1000;
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
@@ -10,12 +12,15 @@ for (var i = 0; i < N; i++) {
 }
 
 var anim = 0;
-setInterval(function() {
+function startAllAnimations() {
   anim++;
   for (var i = 0; i < container.childNodes.length; i++) {
     container.childNodes[i].style.webkitAnimationName = 'anim' + (1 + (i + anim) % 2);
   }
-}, 1000);
+}
+
+startAllAnimations();
+setInterval(startAllAnimations, duration);
 </script>
 
 <style>
