@@ -27,7 +27,7 @@ def ensureSmoothnessPerfWeekBenchmark():
   subprocess.call(['cp', resource_perf_week_page_set_path, smoothness_perf_week_page_set_path])
 
 def refreshPerfWeekFolder():
-  source = perf_week_path + '/BigBenchmarks'
+  source = perf_week_path + '/BigBenchmarks_generated'
   destination = page_sets_path + '/perf_week'
   subprocess.call(['rm', '-r', destination])
   subprocess.call(['cp', '-r', source, destination])

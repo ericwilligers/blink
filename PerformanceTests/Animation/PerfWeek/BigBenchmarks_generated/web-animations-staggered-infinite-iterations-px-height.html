@@ -1,0 +1,48 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<script src="resources/web-animations-api-check.js"></script>
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+
+function startAnimation(element, delay) {
+  target.animate([
+    {height: '20px'},
+    {height: '10px'},
+  ], {
+    duration: duration,
+    iterations: Infinity,
+    delay: delay,
+  });
+}
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+  startAnimation(target, -i * (duration / N));
+}
+
+requestAnimationFrame(function() {
+  window.measurementReady = true;
+});
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

@@ -1,0 +1,62 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<script src="resources/web-animations-api-check.js"></script>
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+var players = [];
+var prevTime = null;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+
+  var animation = new Animation(target, [
+    {backgroundColor: 'pink'},
+    {backgroundColor: 'currentColor'},
+  ], {
+    duration: duration,
+    iterations: Infinity,
+  });
+  var player = document.timeline.play(animation);
+  player.pause();
+  players.push(player);
+}
+
+function setCurrentTime(time) {
+  if (prevTime == null) {
+    prevTime = time;
+  }
+  var delta = time - prevTime;
+  players.forEach(function(player) {
+    player.currentTime += delta;
+  });
+  prevTime = time;
+
+  requestAnimationFrame(setCurrentTime);
+}
+requestAnimationFrame(setCurrentTime);
+
+requestAnimationFrame(function() {
+  window.measurementReady = true;
+});
+</script>
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+}
+</style>

@@ -1,0 +1,45 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  target.style.animationDelay = (-i / N * duration) + 'ms';
+  container.appendChild(target);
+}
+
+var style = document.createElement('style');
+style.textContent = '\
+target {\
+  display: inline-block;\
+  width: 9px; height: 9px;\
+  background: orange;\
+  -webkit-animation: anim ' + duration + 'ms infinite;\
+}\n\
+@-webkit-keyframes anim {\
+  0% { background-color: pink; }\
+  100% { background-color: lime; }\
+}';
+container.appendChild(style);
+
+requestAnimationFrame(function() {
+  window.measurementReady = true;
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

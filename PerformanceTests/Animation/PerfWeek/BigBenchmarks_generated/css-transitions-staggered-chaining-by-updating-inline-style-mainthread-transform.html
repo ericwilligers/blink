@@ -1,0 +1,52 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+var keyframeValues = ['rotate(360deg) translate(1%)', 'rotate(0deg) translate(0%)'];
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  target._keyframe = 0;
+  target.style.transitionDelay = (-i / N * duration) + 'ms';
+  container.appendChild(target);
+  target.addEventListener('transitionend', restartTransition);
+}
+
+function restartTransition(event) {
+  event.target._keyframe ^= 1;
+  event.target.style.transform = keyframeValues[event.target._keyframe];
+  event.target.style.removeProperty('transition-delay');
+}
+
+var measurementReady = false;
+requestAnimationFrame(function() {
+  var styleRule = document.styleSheets[0].rules[2].style;
+  styleRule.transform = keyframeValues[1];
+  requestAnimationFrame(function() {
+    styleRule.transform = keyframeValues[0];
+    measurementReady = true;
+  });
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: transform 1000ms linear;
+}
+</style>

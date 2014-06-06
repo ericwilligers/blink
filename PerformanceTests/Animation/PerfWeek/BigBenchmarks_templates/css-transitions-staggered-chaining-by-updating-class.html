@@ -1,0 +1,58 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = {{NUM_ELEMENTS}};
+var duration = 1000;
+var keyframeValues = [{{PROPERTY_VALUES}}];
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  target._keyframe = 0;
+  target.style.transitionDelay = (-i / N * duration) + 'ms';
+  container.appendChild(target);
+  target.addEventListener('transitionend', restartTransition);
+}
+
+function restartTransition(event) {
+  event.target._keyframe ^= 1;
+  event.target.className = 'keyframe' + event.target._keyframe;
+  event.target.style.removeProperty('transition-delay');
+}
+
+var measurementReady = false;
+requestAnimationFrame(function() {
+  var styleRule = document.styleSheets[0].rules[2].style;
+  styleRule.{{PROPERTY_JAVASCRIPT_NAME}} = keyframeValues[1];
+  requestAnimationFrame(function() {
+    styleRule.{{PROPERTY_JAVASCRIPT_NAME}} = keyframeValues[0];
+    measurementReady = true;
+  });
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: {{PROPERTY_NAME}} 1000ms linear;
+}
+.keyframe0 {
+  {{START}};
+}
+.keyframe1 {
+  {{END}};
+}
+</style>

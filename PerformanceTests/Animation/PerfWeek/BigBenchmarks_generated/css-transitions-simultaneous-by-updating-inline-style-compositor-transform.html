@@ -1,0 +1,50 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 1000;
+var duration = 1000;
+var targets = [];
+var keyframe = 1;
+var keyframeValues = ['rotate(360deg)', 'rotate(0deg)']
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+  targets.push(target);
+}
+
+function startAllAnimations() {
+  keyframe ^= 1;
+  targets.forEach(function(target) {
+    target.style.transform = keyframeValues[keyframe];
+  });
+}
+
+requestAnimationFrame(startAllAnimations);
+setInterval(startAllAnimations, duration);
+
+requestAnimationFrame(function() {
+  window.measurementReady = true;
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: transform 1000ms linear;
+}
+</style>

@@ -1,0 +1,51 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 500;
+var duration = 1000;
+var style = null;
+var keyframe = 1;
+var keyframeValues = ['pink', 'lime']
+
+for (var i = 0; i < N; i++) {
+  container.appendChild(document.createElement('target'));
+}
+
+function startAllAnimations() {
+  keyframe ^= 1;
+  if (style) {
+    style.remove();
+  }
+  style = document.createElement('style');
+  style.textContent = 'target { background-color: ' + keyframeValues[keyframe] + '; }';
+  container.appendChild(style);
+}
+
+requestAnimationFrame(startAllAnimations);
+setInterval(startAllAnimations, duration);
+
+requestAnimationFrame(function() {
+  window.measurementReady = true;
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: lightgoldenrodyellow;
+}
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: magenta;
+  transition: background-color 1000ms linear;
+}
+</style>

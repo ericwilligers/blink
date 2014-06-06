@@ -1,0 +1,75 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+var N = 500;
+var duration = 1000;
+
+function startAnimation() {
+  var target = document.createElement('target');
+  container.appendChild(target);
+  updateStyle(target);
+  target.addEventListener('webkitAnimationEnd', function(e) {
+    updateStyle(target);
+  });
+}
+
+var nextId = 0;
+var nextAnim = 0;
+function updateStyle(element) {
+  if (!element.id) {
+    element.id = 'e' + nextId++;
+  }
+  if (element.styleSheet) {
+    element.styleSheet.remove();
+  }
+  var id = element.id;
+  var anim = id + 'anim' + nextAnim++;
+  var style = document.createElement('style');
+  style.textContent = '\
+  #' + id + ' {\
+    display: inline-block;\
+    width: 9px; height: 9px;\
+    background: orange;\
+    -webkit-animation: ' + anim + ' 1s;\
+  }\n\
+  @-webkit-keyframes ' + anim + ' {\
+    0% { height: 20px; }\
+    100% { height: 10px; }\
+  }';
+  container.appendChild(style);
+  element.styleSheet = style;
+}
+
+requestAnimationFrame(function(t) {
+  var base = t;
+  var i = 0;
+
+  function staggeredStart(t) {
+    elapsed = t - base;
+    for (; i < N * elapsed / duration; i++) {
+      startAnimation();
+    }
+    if (i < N) {
+      requestAnimationFrame(staggeredStart);
+    } else {
+      window.measurementReady = true;
+    }
+  }
+  requestAnimationFrame(staggeredStart);
+});
+</script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

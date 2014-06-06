@@ -1,0 +1,47 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+window.measurementReady = true;
+var N = 1000;
+var duration = 1000;
+
+function startAnimation() {
+  var target = document.createElement('target');
+  container.appendChild(target);
+}
+
+function startAllAnimations() {
+  container.textContent = '';
+  for (var i = 0; i < N; i++) {
+    startAnimation();
+  }
+}
+
+startAllAnimations();
+setInterval(startAllAnimations, duration);
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  -webkit-animation: anim1 1s;
+}
+@-webkit-keyframes anim1 {
+  0% { background-color: pink; }
+  100% { background-color: lime; }
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>

@@ -1,0 +1,52 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<container id="container"></container>
+<script>
+window.measurementReady = true;
+var N = 1000;
+var duration = 1000;
+
+for (var i = 0; i < N; i++) {
+  var target = document.createElement('target');
+  container.appendChild(target);
+}
+
+var anim = 0;
+function startAllAnimations() {
+  anim++;
+  for (var i = 0; i < container.childNodes.length; i++) {
+    container.childNodes[i].style.webkitAnimationName = 'anim' + (1 + (i + anim) % 2);
+  }
+}
+
+startAllAnimations();
+setInterval(startAllAnimations, duration);
+</script>
+
+<style>
+target {
+  display: inline-block;
+  width: 9px; height: 9px;
+  background: orange;
+  -webkit-animation: anim1 1s;
+}
+@-webkit-keyframes anim1 {
+  0% { transform: rotate(360deg) translate(1%); }
+  100% { transform: rotate(0deg) translate(0%); }
+}
+@-webkit-keyframes anim2 {
+  0% { transform: rotate(0deg) translate(0%); }
+  100% { transform: rotate(360deg) translate(1%); }
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+container {
+  display: flex;
+  flex-flow: row wrap;
+  width: 550px;
+  height: 800px;
+  background: magenta;
+}
+</style>
