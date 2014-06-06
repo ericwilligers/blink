@@ -126,13 +126,8 @@ typedef WillBeHeapHashSet<RawPtrWillBeWeakMember<HTMLMediaElement> > WeakMediaEl
 typedef WillBeHeapHashMap<RawPtrWillBeWeakMember<Document>, WeakMediaElementSet> DocumentElementSetMap;
 static DocumentElementSetMap& documentToElementSetMap()
 {
-#if ENABLE(OILPAN)
-    DEFINE_STATIC_LOCAL(Persistent<DocumentElementSetMap>, map, (new DocumentElementSetMap()));
+    DEFINE_STATIC_LOCAL(OwnPtrWillBePersistent<DocumentElementSetMap>, map, (adoptPtrWillBeNoop(new DocumentElementSetMap())));
     return *map;
-#else
-    DEFINE_STATIC_LOCAL(DocumentElementSetMap, map, ());
-    return map;
-#endif
 }
 
 static void addElementToDocumentMap(HTMLMediaElement* element, Document* document)
@@ -300,9 +295,6 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document& docum
     if (document.settings() && document.settings()->mediaPlaybackRequiresUserGesture())
         m_userGestureRequiredForPlay = true;
 
-    // We must always have a ShadowRoot so children like <source> will not render
-    // as they never have an insertion point.
-    ensureUserAgentShadowRoot();
     setHasCustomStyleCallbacks();
     addElementToDocumentMap(this, &document);
 }
@@ -321,10 +313,10 @@ HTMLMediaElement::~HTMLMediaElement()
     // document there is no need to change the delayed load counts
     // because no load event will fire anyway. If the document is
     // still alive we do have to decrement the load delay counts. We
-    // determine if the document is alive by inspecting the weak
-    // documentToElementSetMap. If the document is dead it has been
-    // removed from the map during weak processing.
-    if (documentToElementSetMap().contains(&document()))
+    // determine if the document is alive via the ActiveDOMObject
+    // which is a context lifecycle observer. If the Document has been
+    // destructed ActiveDOMObject::executionContext() returns 0.
+    if (ActiveDOMObject::executionContext())
         setShouldDelayLoadEvent(false);
 #else
     setShouldDelayLoadEvent(false);
@@ -897,10 +889,12 @@ void HTMLMediaElement::loadResource(const KURL& url, ContentType& contentType, c
     if (attemptLoad && canLoadURL(url, contentType, keySystem)) {
         ASSERT(!webMediaPlayer());
 
-        if (m_preload == MediaPlayer::None)
+        if (!m_havePreparedToPlay && !autoplay() && m_preload == MediaPlayer::None) {
+            WTF_LOG(Media, "HTMLMediaElement::loadResource : Delaying load because preload == 'none'");
             m_delayingLoadForPreloadNone = true;
-        else
+        } else {
             startPlayerLoad();
+        }
     } else {
         mediaLoadingFailed(MediaPlayer::FormatError);
     }
@@ -1741,7 +1735,7 @@ void HTMLMediaElement::addPlayedRange(double start, double end)
 
 bool HTMLMediaElement::supportsSave() const
 {
-    return m_player ? m_player->supportsSave() : false;
+    return webMediaPlayer() && webMediaPlayer()->supportsSave();
 }
 
 void HTMLMediaElement::prepareToPlay()
@@ -1797,12 +1791,13 @@ void HTMLMediaElement::seek(double time, ExceptionState& exceptionState)
     // time scale, we will ask the media engine to "seek" to the current movie time, which may be a noop and
     // not generate a timechanged callback. This means m_seeking will never be cleared and we will never
     // fire a 'seeked' event.
+    double mediaTime = webMediaPlayer()->mediaTimeForTimeValue(time);
+    if (time != mediaTime) {
 #if !LOG_DISABLED
-    double mediaTime = m_player->mediaTimeForTimeValue(time);
-    if (time != mediaTime)
         WTF_LOG(Media, "HTMLMediaElement::seek(%f) - media timeline equivalent is %f", time, mediaTime);
 #endif
-    time = m_player->mediaTimeForTimeValue(time);
+        time = mediaTime;
+    }
 
     // 7 - If the (possibly now changed) new playback position is not in one of the ranges given in the
     // seekable attribute, then let it be the position in one of the ranges given in the seekable attribute
@@ -1841,7 +1836,7 @@ void HTMLMediaElement::seek(double time, ExceptionState& exceptionState)
     scheduleEvent(EventTypeNames::seeking);
 
     // 9 - Set the current playback position to the given new playback position
-    m_player->seek(time);
+    webMediaPlayer()->seek(time);
 
     // 10-14 are handled, if necessary, when the engine signals a readystate change or otherwise
     // satisfies seek completion and signals a time change.
@@ -1881,7 +1876,10 @@ bool HTMLMediaElement::seeking() const
 
 void HTMLMediaElement::refreshCachedTime() const
 {
-    m_cachedTime = m_player->currentTime();
+    if (!webMediaPlayer())
+        return;
+
+    m_cachedTime = webMediaPlayer()->currentTime();
     m_cachedTimeWallClockUpdateTime = WTF::currentTime();
 }
 
@@ -1905,7 +1903,7 @@ double HTMLMediaElement::currentTime() const
     static const double minCachedDeltaForWarning = 0.01;
 #endif
 
-    if (!m_player)
+    if (!m_player || !webMediaPlayer())
         return 0;
 
     if (m_seeking) {
@@ -1915,7 +1913,7 @@ double HTMLMediaElement::currentTime() const
 
     if (m_cachedTime != MediaPlayer::invalidTime() && m_paused) {
 #if LOG_CACHED_TIME_WARNINGS
-        double delta = m_cachedTime - m_player->currentTime();
+        double delta = m_cachedTime - webMediaPlayer()->currentTime();
         if (delta > minCachedDeltaForWarning)
             WTF_LOG(Media, "HTMLMediaElement::currentTime - WARNING, cached time is %f seconds off of media time when paused", delta);
 #endif
@@ -1944,7 +1942,7 @@ double HTMLMediaElement::duration() const
     // FIXME: Refactor so m_duration is kept current (in both MSE and
     // non-MSE cases) once we have transitioned from HAVE_NOTHING ->
     // HAVE_METADATA. Currently, m_duration may be out of date for at least MSE
-    // case because MediaSourceBase and SourceBuffer do not notify the element
+    // case because MediaSource and SourceBuffer do not notify the element
     // directly upon duration changes caused by endOfStream, remove, or append
     // operations; rather the notification is triggered by the WebMediaPlayer
     // implementation observing that the underlying engine has updated duration
@@ -1954,7 +1952,7 @@ double HTMLMediaElement::duration() const
     if (m_mediaSource)
         return m_mediaSource->duration();
 
-    return m_player->duration();
+    return webMediaPlayer()->duration();
 }
 
 bool HTMLMediaElement::paused() const
@@ -2770,7 +2768,7 @@ void HTMLMediaElement::mediaPlayerTimeChanged()
     invalidateCachedTime();
 
     // 4.8.10.9 steps 12-14. Needed if no ReadyState change is associated with the seek.
-    if (m_seeking && m_readyState >= HAVE_CURRENT_DATA && !m_player->seeking())
+    if (m_seeking && m_readyState >= HAVE_CURRENT_DATA && !webMediaPlayer()->seeking())
         finishSeek();
 
     // Always call scheduleTimeupdateEvent when the media engine reports a time discontinuity,
@@ -2847,7 +2845,7 @@ void HTMLMediaElement::mediaPlayerPlaybackStateChanged()
     if (!m_player || m_pausedInternal)
         return;
 
-    if (m_player->paused())
+    if (webMediaPlayer()->paused())
         pause();
     else
         playInternal();
@@ -2943,7 +2941,7 @@ bool HTMLMediaElement::potentiallyPlaying() const
 
 bool HTMLMediaElement::couldPlayIfEnoughData() const
 {
-    return !paused() && !endedPlayback() && !stoppedDueToErrors() && !pausedForUserInteraction();
+    return !paused() && !endedPlayback() && !stoppedDueToErrors();
 }
 
 bool HTMLMediaElement::endedPlayback() const
@@ -2985,12 +2983,6 @@ bool HTMLMediaElement::stoppedDueToErrors() const
     return false;
 }
 
-bool HTMLMediaElement::pausedForUserInteraction() const
-{
-//    return !paused() && m_readyState >= HAVE_FUTURE_DATA && [UA requires a decitions from the user]
-    return false;
-}
-
 void HTMLMediaElement::updateVolume()
 {
     if (webMediaPlayer())
@@ -3019,8 +3011,8 @@ void HTMLMediaElement::updatePlayState()
         return;
 
     if (m_pausedInternal) {
-        if (!m_player->paused())
-            m_player->pause();
+        if (webMediaPlayer() && !webMediaPlayer()->paused())
+            webMediaPlayer()->pause();
         refreshCachedTime();
         m_playbackProgressTimer.stop();
         if (hasMediaControls())
@@ -3029,7 +3021,7 @@ void HTMLMediaElement::updatePlayState()
     }
 
     bool shouldBePlaying = potentiallyPlaying();
-    bool playerPaused = m_player->paused();
+    bool playerPaused = webMediaPlayer() && webMediaPlayer()->paused();
 
     WTF_LOG(Media, "HTMLMediaElement::updatePlayState - shouldBePlaying = %s, playerPaused = %s",
         boolString(shouldBePlaying), boolString(playerPaused));
@@ -3043,8 +3035,7 @@ void HTMLMediaElement::updatePlayState()
             // The media engine should just stash the rate and muted values since it isn't already playing.
             m_player->setRate(m_playbackRate);
             updateVolume();
-
-            m_player->play();
+            webMediaPlayer()->play();
         }
 
         if (hasMediaControls())
@@ -3053,8 +3044,8 @@ void HTMLMediaElement::updatePlayState()
         m_playing = true;
 
     } else { // Should not be playing right now
-        if (!playerPaused)
-            m_player->pause();
+        if (!playerPaused && webMediaPlayer())
+            webMediaPlayer()->pause();
         refreshCachedTime();
 
         m_playbackProgressTimer.stop();
@@ -3554,11 +3545,11 @@ bool HTMLMediaElement::isBlocked() const
 {
     // A media element is a blocked media element if its readyState attribute is in the
     // HAVE_NOTHING state, the HAVE_METADATA state, or the HAVE_CURRENT_DATA state,
+    // or if the element has paused for user interaction or paused for in-band content.
     if (m_readyState <= HAVE_CURRENT_DATA)
         return true;
 
-    // or if the element has paused for user interaction.
-    return pausedForUserInteraction();
+    return false;
 }
 
 bool HTMLMediaElement::isBlockedOnMediaController() const

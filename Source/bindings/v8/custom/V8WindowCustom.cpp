@@ -187,7 +187,7 @@ void V8Window::frameElementAttributeGetterCustom(const v8::PropertyCallbackInfo<
 
     // The wrapper for an <iframe> should get its prototype from the context of the frame it's in, rather than its own frame.
     // So, use its containing document as the creation context when wrapping.
-    v8::Handle<v8::Value> creationContext = toV8(&impl->frameElement()->document(), v8::Handle<v8::Object>(), info.GetIsolate());
+    v8::Handle<v8::Value> creationContext = toV8(&impl->frameElement()->document(), info.Holder(), info.GetIsolate());
     RELEASE_ASSERT(!creationContext.IsEmpty());
     v8::Handle<v8::Value> wrapper = toV8(impl->frameElement(), v8::Handle<v8::Object>::Cast(creationContext), info.GetIsolate());
     v8SetReturnValue(info, wrapper);
@@ -309,14 +309,13 @@ void DialogHandler::dialogCreated(DOMWindow* dialogFrame)
 {
     if (m_dialogArguments.IsEmpty())
         return;
-    v8::Isolate* isolate = m_scriptState->isolate();
-    v8::Handle<v8::Context> context = toV8Context(isolate, dialogFrame->frame(), m_scriptState->world());
+    v8::Handle<v8::Context> context = toV8Context(dialogFrame->frame(), m_scriptState->world());
     if (context.IsEmpty())
         return;
     m_scriptStateForDialogFrame = ScriptState::from(context);
 
     ScriptState::Scope scope(m_scriptStateForDialogFrame.get());
-    m_scriptStateForDialogFrame->context()->Global()->Set(v8AtomicString(isolate, "dialogArguments"), m_dialogArguments);
+    m_scriptStateForDialogFrame->context()->Global()->Set(v8AtomicString(m_scriptState->isolate(), "dialogArguments"), m_dialogArguments);
 }
 
 v8::Handle<v8::Value> DialogHandler::returnValue() const
@@ -530,7 +529,7 @@ v8::Handle<v8::Value> toV8(DOMWindow* window, v8::Handle<v8::Object> creationCon
     if (!frame)
         return v8Undefined();
 
-    v8::Handle<v8::Context> context = toV8Context(isolate, frame, DOMWrapperWorld::current(isolate));
+    v8::Handle<v8::Context> context = toV8Context(frame, DOMWrapperWorld::current(isolate));
     if (context.IsEmpty())
         return v8Undefined();
 

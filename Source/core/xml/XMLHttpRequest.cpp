@@ -171,6 +171,7 @@ XMLHttpRequest::XMLHttpRequest(ExecutionContext* context, PassRefPtr<SecurityOri
     , m_timeoutMilliseconds(0)
     , m_state(UNSENT)
     , m_createdDocument(false)
+    , m_downloadedBlobLength(0)
     , m_error(false)
     , m_uploadEventsAllowed(true)
     , m_uploadComplete(false)
@@ -276,26 +277,26 @@ Document* XMLHttpRequest::responseXML(ExceptionState& exceptionState)
 Blob* XMLHttpRequest::responseBlob()
 {
     ASSERT(m_responseTypeCode == ResponseTypeBlob);
+    ASSERT(!m_binaryResponseBuilder.get());
 
     // We always return null before DONE.
     if (m_error || m_state != DONE)
         return 0;
 
     if (!m_responseBlob) {
-        // FIXME: Once RedirectToFileResourceHandler is fixed in Chromium,
-        // re-enable download-to-file optimization introduced by Blink revision
-        // 163141.
+        // When responseType is set to "blob", we redirect the downloaded data
+        // to a file-handle directly in the browser process. We get the
+        // file-path from the ResourceResponse directly instead of copying the
+        // bytes between the browser and the renderer.
         OwnPtr<BlobData> blobData = BlobData::create();
-        size_t size = 0;
-        if (m_binaryResponseBuilder.get() && m_binaryResponseBuilder->size() > 0) {
-            RefPtr<RawData> rawData = RawData::create();
-            size = m_binaryResponseBuilder->size();
-            rawData->mutableData()->append(m_binaryResponseBuilder->data(), size);
-            blobData->appendData(rawData, 0, BlobDataItem::toEndOfFile);
+        String filePath = m_response.downloadedFilePath();
+        // If we errored out or got no data, we still return a blob, just an
+        // empty one.
+        if (!filePath.isEmpty() && m_downloadedBlobLength) {
+            blobData->appendFile(filePath);
             blobData->setContentType(responseMIMEType()); // responseMIMEType defaults to text/xml which may be incorrect.
-            m_binaryResponseBuilder.clear();
         }
-        m_responseBlob = Blob::create(BlobDataHandle::create(blobData.release(), size));
+        m_responseBlob = Blob::create(BlobDataHandle::create(blobData.release(), m_downloadedBlobLength));
     }
 
     return m_responseBlob.get();
@@ -402,6 +403,11 @@ String XMLHttpRequest::responseType()
         return "stream";
     }
     return "";
+}
+
+String XMLHttpRequest::responseURL()
+{
+    return m_response.url().string();
 }
 
 XMLHttpRequestUpload* XMLHttpRequest::upload()
@@ -836,17 +842,25 @@ void XMLHttpRequest::createRequest(ExceptionState& exceptionState)
         request.addHTTPHeaderFields(m_requestHeaders);
 
     ThreadableLoaderOptions options;
-    options.sniffContent = DoNotSniffContent;
     options.preflightPolicy = uploadEvents ? ForcePreflight : ConsiderPreflight;
-    options.allowCredentials = (m_sameOriginRequest || m_includeCredentials) ? AllowStoredCredentials : DoNotAllowStoredCredentials;
-    options.credentialsRequested = m_includeCredentials ? ClientRequestedCredentials : ClientDidNotRequestCredentials;
     options.crossOriginRequestPolicy = UseAccessControl;
-    options.securityOrigin = securityOrigin();
     options.initiator = FetchInitiatorTypeNames::xmlhttprequest;
     options.contentSecurityPolicyEnforcement = ContentSecurityPolicy::shouldBypassMainWorld(&executionContext) ? DoNotEnforceContentSecurityPolicy : EnforceConnectSrcDirective;
-    // TODO(tsepez): Specify TreatAsActiveContent per http://crbug.com/305303.
-    options.mixedContentBlockingTreatment = TreatAsPassiveContent;
     options.timeoutMilliseconds = m_timeoutMilliseconds;
+
+    ResourceLoaderOptions resourceLoaderOptions;
+    resourceLoaderOptions.allowCredentials = (m_sameOriginRequest || m_includeCredentials) ? AllowStoredCredentials : DoNotAllowStoredCredentials;
+    resourceLoaderOptions.credentialsRequested = m_includeCredentials ? ClientRequestedCredentials : ClientDidNotRequestCredentials;
+    resourceLoaderOptions.securityOrigin = securityOrigin();
+    // TODO(tsepez): Specify TreatAsActiveContent per http://crbug.com/305303.
+    resourceLoaderOptions.mixedContentBlockingTreatment = TreatAsPassiveContent;
+
+    // When responseType is set to "blob", we redirect the downloaded data to a
+    // file-handle directly.
+    if (responseTypeCode() == ResponseTypeBlob) {
+        request.setDownloadToFile(true);
+        resourceLoaderOptions.dataBufferingPolicy = DoNotBufferData;
+    }
 
     m_exceptionCode = 0;
     m_error = false;
@@ -860,7 +874,7 @@ void XMLHttpRequest::createRequest(ExceptionState& exceptionState)
         // FIXME: Maybe we need to be able to send XMLHttpRequests from onunload, <http://bugs.webkit.org/show_bug.cgi?id=10904>.
         // FIXME: Maybe create() can return null for other reasons too?
         ASSERT(!m_loader);
-        m_loader = ThreadableLoader::create(executionContext, this, request, options);
+        m_loader = ThreadableLoader::create(executionContext, this, request, options, resourceLoaderOptions);
         if (m_loader) {
             // Neither this object nor the JavaScript wrapper should be deleted while
             // a request is in progress because we need to keep the listeners alive,
@@ -868,7 +882,7 @@ void XMLHttpRequest::createRequest(ExceptionState& exceptionState)
             setPendingActivity(this);
         }
     } else {
-        ThreadableLoader::loadResourceSynchronously(executionContext, request, *this, options);
+        ThreadableLoader::loadResourceSynchronously(executionContext, request, *this, options, resourceLoaderOptions);
     }
 
     if (!m_exceptionCode && m_error)
@@ -971,6 +985,7 @@ void XMLHttpRequest::clearResponse()
     m_responseDocument = nullptr;
 
     m_responseBlob = nullptr;
+    m_downloadedBlobLength = 0;
 
     m_responseStream = nullptr;
 
@@ -1308,6 +1323,8 @@ void XMLHttpRequest::didReceiveResponse(unsigned long identifier, const Resource
 
 void XMLHttpRequest::didReceiveData(const char* data, int len)
 {
+    ASSERT(m_responseTypeCode != ResponseTypeBlob);
+
     if (m_error)
         return;
 
@@ -1340,7 +1357,7 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
 
     if (useDecoder) {
         m_responseText = m_responseText.concatenateWith(m_decoder->decode(data, len));
-    } else if (m_responseTypeCode == ResponseTypeArrayBuffer || m_responseTypeCode == ResponseTypeBlob) {
+    } else if (m_responseTypeCode == ResponseTypeArrayBuffer) {
         // Buffer binary data.
         if (!m_binaryResponseBuilder)
             m_binaryResponseBuilder = SharedBuffer::create();
@@ -1355,6 +1372,29 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
         return;
 
     trackProgress(len);
+}
+
+void XMLHttpRequest::didDownloadData(int dataLength)
+{
+    ASSERT(m_responseTypeCode == ResponseTypeBlob);
+
+    if (m_error)
+        return;
+
+    if (m_state < HEADERS_RECEIVED)
+        changeState(HEADERS_RECEIVED);
+
+    if (!dataLength)
+        return;
+
+    // readystatechange event handler may do something to put this XHR in error
+    // state. We need to check m_error again here.
+    if (m_error)
+        return;
+
+    m_downloadedBlobLength += dataLength;
+
+    trackProgress(dataLength);
 }
 
 void XMLHttpRequest::handleDidTimeout()

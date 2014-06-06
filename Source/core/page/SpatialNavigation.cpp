@@ -430,8 +430,9 @@ Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusType type, Node
     ASSERT(node);
     Node* parent = node;
     do {
+        // FIXME: Spatial navigation is broken for OOPI.
         if (parent->isDocumentNode())
-            parent = toDocument(parent)->frame()->ownerElement();
+            parent = toDocument(parent)->frame()->deprecatedLocalOwner();
         else
             parent = parent->parentOrShadowHostNode();
     } while (parent && !canScrollInDirection(parent, type) && !parent->isDocumentNode());
@@ -496,12 +497,15 @@ bool canScrollInDirection(const LocalFrame* frame, FocusType type)
 static LayoutRect rectToAbsoluteCoordinates(LocalFrame* initialFrame, const LayoutRect& initialRect)
 {
     LayoutRect rect = initialRect;
-    for (LocalFrame* frame = initialFrame; frame; frame = frame->tree().parent()) {
-        if (Element* element = frame->ownerElement()) {
+    for (Frame* frame = initialFrame; frame; frame = frame->tree().parent()) {
+        if (!frame->isLocalFrame())
+            continue;
+        // FIXME: Spatial navigation is broken for OOPI.
+        if (Element* element = frame->deprecatedLocalOwner()) {
             do {
                 rect.move(element->offsetLeft(), element->offsetTop());
             } while ((element = element->offsetParent()));
-            rect.move((-frame->view()->scrollOffset()));
+            rect.move((-toLocalFrame(frame)->view()->scrollOffset()));
         }
     }
     return rect;

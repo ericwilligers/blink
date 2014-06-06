@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<script src="/js-test-resources/js-test.js"></script>
+<body>
+<script>
+    document.body.innerHTML += '<img id="load" src="http://127.0.0.1:8000/resources/slow-image.php?name=square100.png&mimeType=image/png&sleep=100">';
+    jsTestIsAsync = true;
+    var img = window.document.getElementById("load");
+    shouldBe('img.currentSrc', '""');
+    var expectedCurrentSrc = "http://127.0.0.1:8000/resources/slow-image.php?name=square100.png&mimeType=image/png&sleep=100";
+    img.onload = function() {
+        img.srcset = "http://127.0.0.1:8000/resources/slow-image.php?name=square200.png&mimeType=image/png&sleep=100 1x";
+        shouldBe('img.currentSrc', 'expectedCurrentSrc');
+        expectedCurrentSrc = "http://127.0.0.1:8000/resources/slow-image.php?name=square200.png&mimeType=image/png&sleep=100";
+    };
+    window.onload = function() {
+        finishJSTest();
+    };
+</script>
+</body>

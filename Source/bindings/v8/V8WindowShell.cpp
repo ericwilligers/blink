@@ -32,10 +32,10 @@
 #include "bindings/v8/V8WindowShell.h"
 
 #include "RuntimeEnabledFeatures.h"
-#include "V8Document.h"
-#include "V8HTMLCollection.h"
-#include "V8HTMLDocument.h"
-#include "V8Window.h"
+#include "bindings/core/v8/V8Document.h"
+#include "bindings/core/v8/V8HTMLCollection.h"
+#include "bindings/core/v8/V8HTMLDocument.h"
+#include "bindings/core/v8/V8Window.h"
 #include "bindings/v8/DOMWrapperWorld.h"
 #include "bindings/v8/ScriptController.h"
 #include "bindings/v8/V8Binding.h"
@@ -216,7 +216,8 @@ bool V8WindowShell::initialize()
             setInjectedScriptContextDebugId(context, m_frame->script().contextDebugId(mainWindow->context()));
     }
 
-    m_scriptState->world().setActivityLogger(V8DOMActivityLogger::activityLogger(m_world->worldId()));
+    m_scriptState->perContextData()->setActivityLogger(V8DOMActivityLogger::activityLogger(
+        m_world->worldId(), m_frame->document() ? m_frame->document()->baseURI() : KURL()));
     if (!installDOMWindow()) {
         disposeContext(DoNotDetachGlobal);
         return false;
@@ -338,7 +339,7 @@ void V8WindowShell::updateDocumentProperty()
 
     ScriptState::Scope scope(m_scriptState.get());
     v8::Handle<v8::Context> context = m_scriptState->context();
-    v8::Handle<v8::Value> documentWrapper = toV8(m_frame->document(), v8::Handle<v8::Object>(), context->GetIsolate());
+    v8::Handle<v8::Value> documentWrapper = toV8(m_frame->document(), context->Global(), context->GetIsolate());
     ASSERT(documentWrapper == m_document.newLocal(m_isolate) || m_document.isEmpty());
     if (m_document.isEmpty())
         updateDocumentWrapper(v8::Handle<v8::Object>::Cast(documentWrapper));

@@ -28,6 +28,7 @@
 #include "UndoStack.h"
 
 #include "core/dom/ContainerNode.h"
+#include "core/dom/NoEventDispatchAssertion.h"
 #include "core/editing/UndoStep.h"
 #include "wtf/TemporaryChange.h"
 
@@ -53,7 +54,7 @@ PassOwnPtr<UndoStack> UndoStack::create()
     return adoptPtr(new UndoStack());
 }
 
-void UndoStack::registerUndoStep(PassRefPtr<UndoStep> step)
+void UndoStack::registerUndoStep(PassRefPtrWillBeRawPtr<UndoStep> step)
 {
     if (m_undoStack.size() == maximumUndoStackDepth)
         m_undoStack.removeFirst(); // drop oldest item off the far end
@@ -62,7 +63,7 @@ void UndoStack::registerUndoStep(PassRefPtr<UndoStep> step)
     m_undoStack.append(step);
 }
 
-void UndoStack::registerRedoStep(PassRefPtr<UndoStep> step)
+void UndoStack::registerRedoStep(PassRefPtrWillBeRawPtr<UndoStep> step)
 {
     m_redoStack.append(step);
 }
@@ -74,7 +75,7 @@ void UndoStack::didUnloadFrame(const LocalFrame& frame)
     filterOutUndoSteps(m_redoStack, frame);
 }
 
-void UndoStack::filterOutUndoSteps(UndoStepStack& stack, const LocalFrame& frame)
+void UndoStack::filterOutUndoSteps(WillBePersistentUndoStepStack& stack, const LocalFrame& frame)
 {
     UndoStepStack newStack;
     while (!stack.isEmpty()) {
@@ -100,7 +101,7 @@ void UndoStack::undo()
 {
     if (canUndo()) {
         UndoStepStack::iterator back = --m_undoStack.end();
-        RefPtr<UndoStep> step(*back);
+        RefPtrWillBeRawPtr<UndoStep> step(back->get());
         m_undoStack.remove(back);
         step->unapply();
         // unapply will call us back to push this command onto the redo stack.
@@ -111,7 +112,7 @@ void UndoStack::redo()
 {
     if (canRedo()) {
         UndoStepStack::iterator back = --m_redoStack.end();
-        RefPtr<UndoStep> step(*back);
+        RefPtrWillBeRawPtr<UndoStep> step(back->get());
         m_redoStack.remove(back);
 
         ASSERT(!m_inRedo);

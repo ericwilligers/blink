@@ -304,12 +304,13 @@ bool DocumentLoader::shouldContinueForNavigationPolicy(const ResourceRequest& re
 
     // If we're loading content into a subframe, check against the parent's Content Security Policy
     // and kill the load if that check fails.
-    if (m_frame->ownerElement() && !m_frame->ownerElement()->document().contentSecurityPolicy()->allowChildFrameFromSource(request.url())) {
+    // FIXME: CSP checks are broken for OOPI. For now, this policy always allows frames with a remote parent...
+    if (m_frame->deprecatedLocalOwner() && !m_frame->deprecatedLocalOwner()->document().contentSecurityPolicy()->allowChildFrameFromSource(request.url())) {
         // Fire a load event, as timing attacks would otherwise reveal that the
         // frame was blocked. This way, it looks like every other cross-origin
         // page load.
         m_frame->document()->enforceSandboxFlags(SandboxOrigin);
-        m_frame->ownerElement()->dispatchEvent(Event::create(EventTypeNames::load));
+        m_frame->owner()->dispatchLoad();
         return false;
     }
 
@@ -371,12 +372,13 @@ void DocumentLoader::willSendRequest(ResourceRequest& newRequest, const Resource
     // this is a common site technique to return to a page viewing some data that the POST
     // just modified.
     if (newRequest.cachePolicy() == UseProtocolCachePolicy && isRedirectAfterPost(newRequest, redirectResponse))
-        newRequest.setCachePolicy(ReloadIgnoringCacheData);
+        newRequest.setCachePolicy(ReloadBypassingCache);
 
     // If this is a sub-frame, check for mixed content blocking against the top frame.
     if (m_frame->tree().parent()) {
-        LocalFrame* top = m_frame->tree().top();
-        if (!top->loader().mixedContentChecker()->canRunInsecureContent(top->document()->securityOrigin(), newRequest.url())) {
+        // FIXME: This does not yet work with out-of-process iframes.
+        Frame* top = m_frame->tree().top();
+        if (top->isLocalFrame() && !toLocalFrame(top)->loader().mixedContentChecker()->canRunInsecureContent(toLocalFrame(top)->document()->securityOrigin(), newRequest.url())) {
             cancelMainResourceLoad(ResourceError::cancelledError(newRequest.url()));
             return;
         }
@@ -454,8 +456,8 @@ void DocumentLoader::responseReceived(Resource* resource, const ResourceResponse
             String message = "Refused to display '" + response.url().elidedString() + "' in a frame because it set 'X-Frame-Options' to '" + content + "'.";
             frame()->document()->addConsoleMessageWithRequestIdentifier(SecurityMessageSource, ErrorMessageLevel, message, identifier);
             frame()->document()->enforceSandboxFlags(SandboxOrigin);
-            if (HTMLFrameOwnerElement* ownerElement = frame()->ownerElement())
-                ownerElement->dispatchEvent(Event::create(EventTypeNames::load));
+            if (FrameOwner* owner = frame()->owner())
+                owner->dispatchLoad();
 
             // The load event might have detached this frame. In that case, the load will already have been cancelled during detach.
             if (frameLoader())
@@ -479,11 +481,16 @@ void DocumentLoader::responseReceived(Resource* resource, const ResourceResponse
 
     if (m_response.isHTTP()) {
         int status = m_response.httpStatusCode();
-        if ((status < 200 || status >= 300) && m_frame->ownerElement() && m_frame->ownerElement()->isObjectElement()) {
-            m_frame->ownerElement()->renderFallbackContent();
-            // object elements are no longer rendered after we fallback, so don't
-            // keep trying to process data from their load
-            cancelMainResourceLoad(ResourceError::cancelledError(m_request.url()));
+        // FIXME: Fallback content only works if the parent is in the same processs.
+        if ((status < 200 || status >= 300) && m_frame->owner()) {
+            if (!m_frame->deprecatedLocalOwner()) {
+                ASSERT_NOT_REACHED();
+            } else if (m_frame->deprecatedLocalOwner()->isObjectElement()) {
+                m_frame->deprecatedLocalOwner()->renderFallbackContent();
+                // object elements are no longer rendered after we fallback, so don't
+                // keep trying to process data from their load
+                cancelMainResourceLoad(ResourceError::cancelledError(m_request.url()));
+            }
         }
     }
 }
@@ -621,7 +628,7 @@ void DocumentLoader::addAllArchiveResources(MHTMLArchive* archive)
 
 void DocumentLoader::prepareSubframeArchiveLoadIfNeeded()
 {
-    if (!m_frame->tree().parent())
+    if (!m_frame->tree().parent() || !m_frame->tree().parent()->isLocalFrame())
         return;
 
     ArchiveResourceCollection* parentCollection = m_frame->tree().parent()->loader().documentLoader()->m_archiveResourceCollection.get();
@@ -767,7 +774,7 @@ void DocumentLoader::endWriting(DocumentWriter* writer)
     m_writer.clear();
 }
 
-PassRefPtr<DocumentWriter> DocumentLoader::createWriterFor(LocalFrame* frame, const Document* ownerDocument, const KURL& url, const AtomicString& mimeType, const AtomicString& encoding, bool userChosen, bool dispatch)
+PassRefPtrWillBeRawPtr<DocumentWriter> DocumentLoader::createWriterFor(LocalFrame* frame, const Document* ownerDocument, const KURL& url, const AtomicString& mimeType, const AtomicString& encoding, bool userChosen, bool dispatch)
 {
     // Create a new document before clearing the frame, because it may need to
     // inherit an aliased security context.
@@ -791,7 +798,7 @@ PassRefPtr<DocumentWriter> DocumentLoader::createWriterFor(LocalFrame* frame, co
     if (!shouldReuseDefaultView)
         frame->setDOMWindow(DOMWindow::create(*frame));
 
-    RefPtr<Document> document = frame->domWindow()->installNewDocument(mimeType, init);
+    RefPtrWillBeRawPtr<Document> document = frame->domWindow()->installNewDocument(mimeType, init);
     if (ownerDocument) {
         document->setCookieURL(ownerDocument->cookieURL());
         document->setSecurityOrigin(ownerDocument->securityOrigin());

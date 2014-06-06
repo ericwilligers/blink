@@ -364,7 +364,6 @@ void CanvasRenderingContext2D::realizeSaves()
         // turn necessary to support correct resizing and unwinding of the stack).
         m_stateStack.last()->m_unrealizedSaveCount = 0;
         GraphicsContext* context = drawingContext();
-        ASSERT(context);
         if (context)
             context->save();
         validateStateStack();
@@ -2313,16 +2312,6 @@ void CanvasRenderingContext2D::drawFocusIfNeededInternal(const Path& path, Eleme
     // focus events fire.
     if (element->document().focusedElement() == element)
         drawFocusRing(path);
-}
-
-bool CanvasRenderingContext2D::drawCustomFocusRing(Element* element)
-{
-    if (!focusRingCallIsValid(m_path, element))
-        return false;
-
-    // Return true if the application should draw the focus ring. The spec allows us to
-    // override this for accessibility, but currently Blink doesn't take advantage of this.
-    return element->focused();
 }
 
 bool CanvasRenderingContext2D::focusRingCallIsValid(const Path& path, Element* element)

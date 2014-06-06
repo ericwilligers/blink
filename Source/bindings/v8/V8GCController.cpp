@@ -31,13 +31,12 @@
 #include "config.h"
 #include "bindings/v8/V8GCController.h"
 
-#include <algorithm>
-#include "V8MutationObserver.h"
-#include "V8Node.h"
-#include "V8ScriptRunner.h"
+#include "bindings/core/v8/V8MutationObserver.h"
+#include "bindings/core/v8/V8Node.h"
 #include "bindings/v8/RetainedDOMInfo.h"
 #include "bindings/v8/V8AbstractEventListener.h"
 #include "bindings/v8/V8Binding.h"
+#include "bindings/v8/V8ScriptRunner.h"
 #include "bindings/v8/WrapperTypeInfo.h"
 #include "core/dom/Attr.h"
 #include "core/dom/NodeTraversal.h"
@@ -46,9 +45,11 @@
 #include "core/dom/shadow/ShadowRoot.h"
 #include "core/html/HTMLImageElement.h"
 #include "core/html/HTMLTemplateElement.h"
+#include "core/html/imports/HTMLImportsController.h"
 #include "core/inspector/InspectorTraceEvents.h"
 #include "core/svg/SVGElement.h"
 #include "platform/TraceEvent.h"
+#include <algorithm>
 
 namespace WebCore {
 
@@ -76,8 +77,12 @@ Node* V8GCController::opaqueRootForGC(Node* node, v8::Isolate*)
     // The same special handling is in V8GCController::gcTree().
     // Maybe should image elements be active DOM nodes?
     // See https://code.google.com/p/chromium/issues/detail?id=164882
-    if (node->inDocument() || (isHTMLImageElement(*node) && toHTMLImageElement(*node).hasPendingActivity()))
-        return &node->document();
+    if (node->inDocument() || (isHTMLImageElement(*node) && toHTMLImageElement(*node).hasPendingActivity())) {
+        Document& document = node->document();
+        if (HTMLImportsController* controller = document.importsController())
+            return controller->master();
+        return &document;
+    }
 
     if (node->isAttributeNode()) {
         Node* ownerElement = toAttr(node)->ownerElement();
@@ -192,6 +197,18 @@ private:
             if (isHTMLTemplateElement(*node)) {
                 if (!traverseTree(toHTMLTemplateElement(*node).content(), partiallyDependentNodes))
                     return false;
+            }
+
+            // Document maintains the list of imported documents through HTMLImportsController.
+            if (node->isDocumentNode()) {
+                Document* document = toDocument(node);
+                HTMLImportsController* controller = document->importsController();
+                if (controller && document == controller->master()) {
+                    for (unsigned i = 0; i < controller->loaderCount(); ++i) {
+                        if (!traverseTree(controller->loaderDocumentAt(i), partiallyDependentNodes))
+                            return false;
+                    }
+                }
             }
         }
         return true;

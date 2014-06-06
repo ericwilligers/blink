@@ -49,6 +49,8 @@ FAIL childWindow.navigator.battery.onchargingchange should be null. Threw except
 FAIL childWindow.navigator.battery.onchargingtimechange should be null. Threw exception TypeError: Cannot read property 'onchargingtimechange' of null
 FAIL childWindow.navigator.battery.ondischargingtimechange should be null. Threw exception TypeError: Cannot read property 'ondischargingtimechange' of null
 FAIL childWindow.navigator.battery.onlevelchange should be null. Threw exception TypeError: Cannot read property 'onlevelchange' of null
+FAIL childWindow.navigator.connection.ontypechange should be null. Threw exception TypeError: Cannot read property 'ontypechange' of null
+FAIL childWindow.navigator.connection.type should be other. Threw exception TypeError: Cannot read property 'type' of null
 PASS childWindow.navigator.cookieEnabled is false
 PASS childWindow.navigator.doNotTrack is null
 PASS childWindow.navigator.language is window.navigator.language
@@ -57,7 +59,8 @@ PASS childWindow.navigator.onLine is window.navigator.onLine
 PASS childWindow.navigator.platform is window.navigator.platform
 PASS childWindow.navigator.product is window.navigator.product
 PASS childWindow.navigator.productSub is window.navigator.productSub
-FAIL childWindow.navigator.serviceWorker.current should be null. Threw exception TypeError: Cannot read property 'current' of null
+FAIL childWindow.navigator.serviceWorker.controller should be null. Threw exception TypeError: Cannot read property 'controller' of null
+FAIL childWindow.navigator.serviceWorker.waiting should be null. Threw exception TypeError: Cannot read property 'waiting' of null
 PASS childWindow.navigator.userAgent is ''
 PASS childWindow.navigator.vendor is window.navigator.vendor
 PASS childWindow.navigator.vendorSub is ''
@@ -99,6 +102,7 @@ PASS childWindow.oninvalid is null
 PASS childWindow.onkeydown is null
 PASS childWindow.onkeypress is null
 PASS childWindow.onkeyup is null
+PASS childWindow.onlanguagechange is null
 PASS childWindow.onload is null
 PASS childWindow.onloadeddata is null
 PASS childWindow.onloadedmetadata is null

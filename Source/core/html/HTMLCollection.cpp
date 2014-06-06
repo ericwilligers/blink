@@ -28,9 +28,11 @@
 #include "core/dom/ClassCollection.h"
 #include "core/dom/ElementTraversal.h"
 #include "core/dom/NodeRareData.h"
+#include "core/html/DocumentNameCollection.h"
 #include "core/html/HTMLElement.h"
 #include "core/html/HTMLObjectElement.h"
 #include "core/html/HTMLOptionElement.h"
+#include "core/html/WindowNameCollection.h"
 #include "wtf/HashSet.h"
 
 namespace WebCore {
@@ -201,11 +203,15 @@ template <> inline bool isMatchingElement(const HTMLCollection& htmlCollection, 
     case NodeChildren:
         return true;
     case ClassCollectionType:
-        return static_cast<const ClassCollection&>(htmlCollection).elementMatches(element);
+        return toClassCollection(htmlCollection).elementMatches(element);
     case TagCollectionType:
-        return static_cast<const TagCollection&>(htmlCollection).elementMatches(element);
+        return toTagCollection(htmlCollection).elementMatches(element);
     case HTMLTagCollectionType:
-        return static_cast<const HTMLTagCollection&>(htmlCollection).elementMatches(element);
+        return toHTMLTagCollection(htmlCollection).elementMatches(element);
+    case DocumentNamedItems:
+        return toDocumentNameCollection(htmlCollection).elementMatches(element);
+    case WindowNamedItems:
+        return toWindowNameCollection(htmlCollection).elementMatches(element);
     default:
         break;
     }
@@ -339,9 +345,9 @@ Element* HTMLCollection::traverseToFirstElement() const
 {
     switch (type()) {
     case HTMLTagCollectionType:
-        return firstMatchingElement(static_cast<const HTMLTagCollection&>(*this));
+        return firstMatchingElement(toHTMLTagCollection(*this));
     case ClassCollectionType:
-        return firstMatchingElement(static_cast<const ClassCollection&>(*this));
+        return firstMatchingElement(toClassCollection(*this));
     default:
         if (overridesItemAfter())
             return virtualItemAfter(0);
@@ -373,9 +379,9 @@ Element* HTMLCollection::traverseForwardToOffset(unsigned offset, Element& curre
     ASSERT(currentOffset < offset);
     switch (type()) {
     case HTMLTagCollectionType:
-        return traverseMatchingElementsForwardToOffset(static_cast<const HTMLTagCollection&>(*this), offset, currentElement, currentOffset);
+        return traverseMatchingElementsForwardToOffset(toHTMLTagCollection(*this), offset, currentElement, currentOffset);
     case ClassCollectionType:
-        return traverseMatchingElementsForwardToOffset(static_cast<const ClassCollection&>(*this), offset, currentElement, currentOffset);
+        return traverseMatchingElementsForwardToOffset(toClassCollection(*this), offset, currentElement, currentOffset);
     default:
         if (overridesItemAfter()) {
             Element* next = &currentElement;

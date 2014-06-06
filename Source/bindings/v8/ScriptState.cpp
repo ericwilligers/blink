@@ -69,7 +69,7 @@ ExecutionContext* ScriptState::executionContext() const
     return toExecutionContext(context());
 }
 
-void ScriptState::setExecutionContext(PassRefPtr<ExecutionContext>)
+void ScriptState::setExecutionContext(ExecutionContext*)
 {
     ASSERT_NOT_REACHED();
 }
@@ -84,7 +84,7 @@ ScriptState* ScriptState::forMainWorld(LocalFrame* frame)
 {
     v8::Isolate* isolate = toIsolate(frame);
     v8::HandleScope handleScope(isolate);
-    return ScriptState::from(toV8Context(isolate, frame, DOMWrapperWorld::mainWorld()));
+    return ScriptState::from(toV8Context(frame, DOMWrapperWorld::mainWorld()));
 }
 
 PassRefPtr<ScriptStateForTesting> ScriptStateForTesting::create(v8::Handle<v8::Context> context, PassRefPtr<DOMWrapperWorld> world)
@@ -103,10 +103,10 @@ ScriptStateForTesting::ScriptStateForTesting(v8::Handle<v8::Context> context, Pa
 
 ExecutionContext* ScriptStateForTesting::executionContext() const
 {
-    return m_executionContext.get();
+    return m_executionContext;
 }
 
-void ScriptStateForTesting::setExecutionContext(PassRefPtr<ExecutionContext> executionContext)
+void ScriptStateForTesting::setExecutionContext(ExecutionContext* executionContext)
 {
     m_executionContext = executionContext;
 }

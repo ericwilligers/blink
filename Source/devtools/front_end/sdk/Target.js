@@ -49,6 +49,8 @@ WebInspector.Target.prototype = {
     /**
      * @param {string} name
      * @param {function()|null} callback
+     * @param {?Protocol.Error} error
+     * @param {*} result
      */
     _initializeCapability: function(name, callback, error, result)
     {
@@ -243,7 +245,7 @@ WebInspector.TargetManager.prototype = {
 
         /**
          * @this {WebInspector.TargetManager}
-         * @param newTarget
+         * @param {!WebInspector.Target} newTarget
          */
         function callbackWrapper(newTarget)
         {

@@ -1280,7 +1280,7 @@ static void readonlyEventTargetOrNullAttributeAttributeGetter(const v8::Property
     v8::Handle<v8::Object> holder = info.Holder();
     TestObject* impl = V8TestObject::toNative(holder);
     bool isNull = false;
-    RefPtr<EventTarget> v8Value = impl->readonlyEventTargetOrNullAttribute(isNull);
+    RefPtrWillBeRawPtr<EventTarget> v8Value = impl->readonlyEventTargetOrNullAttribute(isNull);
     if (isNull) {
         v8SetReturnValueNull(info);
         return;
@@ -1653,9 +1653,9 @@ static void activityLoggingAccessForAllWorldsLongAttributeAttributeGetter(const 
 static void activityLoggingAccessForAllWorldsLongAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingAccessForAllWorldsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingAccessForAllWorldsLongAttribute");
     TestObjectV8Internal::activityLoggingAccessForAllWorldsLongAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -1672,9 +1672,9 @@ static void activityLoggingAccessForAllWorldsLongAttributeAttributeSetter(v8::Lo
 static void activityLoggingAccessForAllWorldsLongAttributeAttributeSetterCallback(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
-        world.activityLogger()->logSetter("TestObject.activityLoggingAccessForAllWorldsLongAttribute", v8Value);
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingAccessForAllWorldsLongAttribute", v8Value);
     }
     TestObjectV8Internal::activityLoggingAccessForAllWorldsLongAttributeAttributeSetter(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -1690,9 +1690,9 @@ static void activityLoggingGetterForAllWorldsLongAttributeAttributeGetter(const 
 static void activityLoggingGetterForAllWorldsLongAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingGetterForAllWorldsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingGetterForAllWorldsLongAttribute");
     TestObjectV8Internal::activityLoggingGetterForAllWorldsLongAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -1739,9 +1739,9 @@ static void activityLoggingSetterForAllWorldsLongAttributeAttributeSetter(v8::Lo
 static void activityLoggingSetterForAllWorldsLongAttributeAttributeSetterCallback(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
-        world.activityLogger()->logSetter("TestObject.activityLoggingSetterForAllWorldsLongAttribute", v8Value);
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingSetterForAllWorldsLongAttribute", v8Value);
     }
     TestObjectV8Internal::activityLoggingSetterForAllWorldsLongAttributeAttributeSetter(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -2476,9 +2476,9 @@ static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeGetter(co
 static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute");
     TestObjectV8Internal::activityLoggingAccessPerWorldBindingsLongAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -2495,9 +2495,9 @@ static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeSetter(v8
 static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeSetterCallback(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
-        world.activityLogger()->logSetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute", v8Value);
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute", v8Value);
     }
     TestObjectV8Internal::activityLoggingAccessPerWorldBindingsLongAttributeAttributeSetter(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -2513,9 +2513,9 @@ static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeGetterFor
 static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeGetterCallbackForMainWorld(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute");
     TestObjectV8Internal::activityLoggingAccessPerWorldBindingsLongAttributeAttributeGetterForMainWorld(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -2532,9 +2532,9 @@ static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeSetterFor
 static void activityLoggingAccessPerWorldBindingsLongAttributeAttributeSetterCallbackForMainWorld(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
-        world.activityLogger()->logSetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute", v8Value);
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingAccessPerWorldBindingsLongAttribute", v8Value);
     }
     TestObjectV8Internal::activityLoggingAccessPerWorldBindingsLongAttributeAttributeSetterForMainWorld(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -2550,9 +2550,9 @@ static void activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttributeA
 static void activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttribute");
     TestObjectV8Internal::activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -2569,9 +2569,9 @@ static void activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttributeA
 static void activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttributeAttributeSetterCallback(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
-        world.activityLogger()->logSetter("TestObject.activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttribute", v8Value);
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttribute", v8Value);
     }
     TestObjectV8Internal::activityLoggingAccessForIsolatedWorldsPerWorldBindingsLongAttributeAttributeSetter(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -2617,9 +2617,9 @@ static void activityLoggingGetterPerWorldBindingsLongAttributeAttributeGetter(co
 static void activityLoggingGetterPerWorldBindingsLongAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingGetterPerWorldBindingsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingGetterPerWorldBindingsLongAttribute");
     TestObjectV8Internal::activityLoggingGetterPerWorldBindingsLongAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -2650,9 +2650,9 @@ static void activityLoggingGetterPerWorldBindingsLongAttributeAttributeGetterFor
 static void activityLoggingGetterPerWorldBindingsLongAttributeAttributeGetterCallbackForMainWorld(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingGetterPerWorldBindingsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingGetterPerWorldBindingsLongAttribute");
     TestObjectV8Internal::activityLoggingGetterPerWorldBindingsLongAttributeAttributeGetterForMainWorld(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -2683,9 +2683,9 @@ static void activityLoggingGetterForIsolatedWorldsPerWorldBindingsLongAttributeA
 static void activityLoggingGetterForIsolatedWorldsPerWorldBindingsLongAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingGetterForIsolatedWorldsPerWorldBindingsLongAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingGetterForIsolatedWorldsPerWorldBindingsLongAttribute");
     TestObjectV8Internal::activityLoggingGetterForIsolatedWorldsPerWorldBindingsLongAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -4341,12 +4341,12 @@ static void activityLoggingSetterOnlyLogPreviousValueAttributeAttributeSetter(v8
 static void activityLoggingSetterOnlyLogPreviousValueAttributeAttributeSetterCallback(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         TestObject* impl = V8TestObject::toNative(info.Holder());
         int original = impl->activityLoggingSetterOnlyLogPreviousValueAttribute();
         v8::Handle<v8::Value> originalValue = v8::Integer::New(info.GetIsolate(), impl->activityLoggingSetterOnlyLogPreviousValueAttribute());
-        world.activityLogger()->logSetter("TestObject.activityLoggingSetterOnlyLogPreviousValueAttribute", v8Value, originalValue);
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingSetterOnlyLogPreviousValueAttribute", v8Value, originalValue);
     }
     TestObjectV8Internal::activityLoggingSetterOnlyLogPreviousValueAttributeAttributeSetter(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -4362,9 +4362,9 @@ static void activityLoggingLogPreviousValueInterfaceAttributeAttributeGetter(con
 static void activityLoggingLogPreviousValueInterfaceAttributeAttributeGetterCallback(v8::Local<v8::String>, const v8::PropertyCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMGetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger())
-        world.activityLogger()->logGetter("TestObject.activityLoggingLogPreviousValueInterfaceAttribute");
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger())
+        contextData->activityLogger()->logGetter("TestObject.activityLoggingLogPreviousValueInterfaceAttribute");
     TestObjectV8Internal::activityLoggingLogPreviousValueInterfaceAttributeAttributeGetter(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
 }
@@ -4380,12 +4380,12 @@ static void activityLoggingLogPreviousValueInterfaceAttributeAttributeSetter(v8:
 static void activityLoggingLogPreviousValueInterfaceAttributeAttributeSetterCallback(v8::Local<v8::String>, v8::Local<v8::Value> v8Value, const v8::PropertyCallbackInfo<void>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMSetter");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         TestObject* impl = V8TestObject::toNative(info.Holder());
         RefPtr<TestInterfaceEmpty> original = impl->activityLoggingLogPreviousValueInterfaceAttribute();
         v8::Handle<v8::Value> originalValue = toV8(impl->activityLoggingLogPreviousValueInterfaceAttribute(), info.Holder(), info.GetIsolate());
-        world.activityLogger()->logSetter("TestObject.activityLoggingLogPreviousValueInterfaceAttribute", v8Value, originalValue);
+        contextData->activityLogger()->logSetter("TestObject.activityLoggingLogPreviousValueInterfaceAttribute", v8Value, originalValue);
     }
     TestObjectV8Internal::activityLoggingLogPreviousValueInterfaceAttributeAttributeSetter(v8Value, info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -4802,6 +4802,7 @@ static void voidMethodDateArgMethod(const v8::FunctionCallbackInfo<v8::Value>& i
     double dateArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(dateArg, toCoreDate(info[0]));
     }
     impl->voidMethodDateArg(dateArg);
@@ -4823,7 +4824,7 @@ static void voidMethodStringArgMethod(const v8::FunctionCallbackInfo<v8::Value>&
     TestObject* impl = V8TestObject::toNative(info.Holder());
     V8StringResource<> stringArg;
     {
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(stringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(stringArg, info[0]);
     }
     impl->voidMethodStringArg(stringArg);
 }
@@ -4846,6 +4847,7 @@ static void voidMethodDOMTimeStampArgMethod(const v8::FunctionCallbackInfo<v8::V
     unsigned long long domTimeStampArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(domTimeStampArg, toUInt64(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodDOMTimeStampArg(domTimeStampArg);
@@ -4868,6 +4870,7 @@ static void voidMethodBooleanArgMethod(const v8::FunctionCallbackInfo<v8::Value>
     bool booleanArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(booleanArg, info[0]->BooleanValue());
     }
     impl->voidMethodBooleanArg(booleanArg);
@@ -4891,6 +4894,7 @@ static void voidMethodByteArgMethod(const v8::FunctionCallbackInfo<v8::Value>& i
     int byteArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(byteArg, toInt8(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodByteArg(byteArg);
@@ -4913,6 +4917,7 @@ static void voidMethodDoubleArgMethod(const v8::FunctionCallbackInfo<v8::Value>&
     double doubleArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(doubleArg, static_cast<double>(info[0]->NumberValue()));
     }
     impl->voidMethodDoubleArg(doubleArg);
@@ -4935,6 +4940,7 @@ static void voidMethodFloatArgMethod(const v8::FunctionCallbackInfo<v8::Value>& 
     float floatArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(floatArg, static_cast<float>(info[0]->NumberValue()));
     }
     impl->voidMethodFloatArg(floatArg);
@@ -4958,6 +4964,7 @@ static void voidMethodLongArgMethod(const v8::FunctionCallbackInfo<v8::Value>& i
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodLongArg(longArg);
@@ -4981,6 +4988,7 @@ static void voidMethodLongLongArgMethod(const v8::FunctionCallbackInfo<v8::Value
     long long longLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longLongArg, toInt64(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodLongLongArg(longLongArg);
@@ -5004,6 +5012,7 @@ static void voidMethodOctetArgMethod(const v8::FunctionCallbackInfo<v8::Value>& 
     unsigned octetArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(octetArg, toUInt8(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodOctetArg(octetArg);
@@ -5027,6 +5036,7 @@ static void voidMethodShortArgMethod(const v8::FunctionCallbackInfo<v8::Value>& 
     int shortArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(shortArg, toInt16(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodShortArg(shortArg);
@@ -5050,6 +5060,7 @@ static void voidMethodUnsignedLongArgMethod(const v8::FunctionCallbackInfo<v8::V
     unsigned unsignedLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(unsignedLongArg, toUInt32(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodUnsignedLongArg(unsignedLongArg);
@@ -5073,6 +5084,7 @@ static void voidMethodUnsignedLongLongArgMethod(const v8::FunctionCallbackInfo<v
     unsigned long long unsignedLongLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(unsignedLongLongArg, toUInt64(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodUnsignedLongLongArg(unsignedLongLongArg);
@@ -5096,6 +5108,7 @@ static void voidMethodUnsignedShortArgMethod(const v8::FunctionCallbackInfo<v8::
     unsigned unsignedShortArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(unsignedShortArg, toUInt16(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodUnsignedShortArg(unsignedShortArg);
@@ -5131,6 +5144,7 @@ static void voidMethodTestInterfaceEmptyArgMethod(const v8::FunctionCallbackInfo
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodTestInterfaceEmptyArg(testInterfaceEmptyArg);
@@ -5155,6 +5169,7 @@ static void voidMethodLongArgTestInterfaceEmptyArgMethod(const v8::FunctionCallb
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[1]));
     }
@@ -5204,6 +5219,7 @@ static void voidMethodVoidCallbackFunctionArgMethod(const v8::FunctionCallbackIn
     ScriptValue voidCallbackFunctionArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(voidCallbackFunctionArg, ScriptValue(ScriptState::current(info.GetIsolate()), info[0]));
     }
     impl->voidMethodVoidCallbackFunctionArg(voidCallbackFunctionArg);
@@ -5226,6 +5242,7 @@ static void voidMethodAnyCallbackFunctionOptionalAnyArgMethod(const v8::Function
     ScriptValue anyCallbackFunctionOptionalAnyArgArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(anyCallbackFunctionOptionalAnyArgArg, ScriptValue(ScriptState::current(info.GetIsolate()), info[0]));
     }
     impl->voidMethodAnyCallbackFunctionOptionalAnyArg(anyCallbackFunctionOptionalAnyArgArg);
@@ -5274,6 +5291,7 @@ static void voidMethodCompareHowArgMethod(const v8::FunctionCallbackInfo<v8::Val
     Range::CompareHow compareHowArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(compareHowArg, static_cast<Range::CompareHow>(info[0]->Int32Value()));
     }
     impl->voidMethodCompareHowArg(compareHowArg);
@@ -5296,6 +5314,7 @@ static void voidMethodEventTargetArgMethod(const v8::FunctionCallbackInfo<v8::Va
     EventTarget* eventTargetArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(eventTargetArg, V8DOMWrapper::isDOMWrapper(info[0]) ? toWrapperTypeInfo(v8::Handle<v8::Object>::Cast(info[0]))->toEventTarget(v8::Handle<v8::Object>::Cast(info[0])) : 0);
     }
     impl->voidMethodEventTargetArg(eventTargetArg);
@@ -5318,6 +5337,7 @@ static void voidMethodMediaQueryListListenerArgMethod(const v8::FunctionCallback
     RefPtrWillBeRawPtr<MediaQueryListListener> mediaQueryListListenerArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(mediaQueryListListenerArg, MediaQueryListListener::create(ScriptState::current(info.GetIsolate()), ScriptValue(ScriptState::current(info.GetIsolate()), info[0])));
     }
     impl->voidMethodMediaQueryListListenerArg(mediaQueryListListenerArg);
@@ -5340,6 +5360,7 @@ static void voidMethodAnyArgMethod(const v8::FunctionCallbackInfo<v8::Value>& in
     ScriptValue anyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(anyArg, ScriptValue(ScriptState::current(info.GetIsolate()), info[0]));
     }
     impl->voidMethodAnyArg(anyArg);
@@ -5362,6 +5383,7 @@ static void voidMethodAttrArgMethod(const v8::FunctionCallbackInfo<v8::Value>& i
     Attr* attrArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(attrArg, V8Attr::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodAttrArg(attrArg);
@@ -5384,6 +5406,7 @@ static void voidMethodDocumentArgMethod(const v8::FunctionCallbackInfo<v8::Value
     Document* documentArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(documentArg, V8Document::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodDocumentArg(documentArg);
@@ -5406,6 +5429,7 @@ static void voidMethodDocumentTypeArgMethod(const v8::FunctionCallbackInfo<v8::V
     DocumentType* documentTypeArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(documentTypeArg, V8DocumentType::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodDocumentTypeArg(documentTypeArg);
@@ -5428,6 +5452,7 @@ static void voidMethodElementArgMethod(const v8::FunctionCallbackInfo<v8::Value>
     Element* elementArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(elementArg, V8Element::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodElementArg(elementArg);
@@ -5450,6 +5475,7 @@ static void voidMethodNodeArgMethod(const v8::FunctionCallbackInfo<v8::Value>& i
     Node* nodeArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(nodeArg, V8Node::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodNodeArg(nodeArg);
@@ -5537,6 +5563,7 @@ static void voidMethodArrayBufferArgMethod(const v8::FunctionCallbackInfo<v8::Va
     ArrayBuffer* arrayBufferArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(arrayBufferArg, info[0]->IsArrayBuffer() ? V8ArrayBuffer::toNative(v8::Handle<v8::ArrayBuffer>::Cast(info[0])) : 0);
     }
     impl->voidMethodArrayBufferArg(arrayBufferArg);
@@ -5559,6 +5586,7 @@ static void voidMethodArrayBufferOrNullArgMethod(const v8::FunctionCallbackInfo<
     ArrayBuffer* arrayBufferArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(arrayBufferArg, info[0]->IsArrayBuffer() ? V8ArrayBuffer::toNative(v8::Handle<v8::ArrayBuffer>::Cast(info[0])) : 0);
     }
     impl->voidMethodArrayBufferOrNullArg(arrayBufferArg);
@@ -5581,6 +5609,7 @@ static void voidMethodArrayBufferViewArgMethod(const v8::FunctionCallbackInfo<v8
     ArrayBufferView* arrayBufferViewArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(arrayBufferViewArg, info[0]->IsArrayBufferView() ? V8ArrayBufferView::toNative(v8::Handle<v8::ArrayBufferView>::Cast(info[0])) : 0);
     }
     impl->voidMethodArrayBufferViewArg(arrayBufferViewArg);
@@ -5603,6 +5632,7 @@ static void voidMethodFloat32ArrayArgMethod(const v8::FunctionCallbackInfo<v8::V
     Float32Array* float32ArrayArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(float32ArrayArg, info[0]->IsFloat32Array() ? V8Float32Array::toNative(v8::Handle<v8::Float32Array>::Cast(info[0])) : 0);
     }
     impl->voidMethodFloat32ArrayArg(float32ArrayArg);
@@ -5625,6 +5655,7 @@ static void voidMethodInt32ArrayArgMethod(const v8::FunctionCallbackInfo<v8::Val
     Int32Array* int32ArrayArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(int32ArrayArg, info[0]->IsInt32Array() ? V8Int32Array::toNative(v8::Handle<v8::Int32Array>::Cast(info[0])) : 0);
     }
     impl->voidMethodInt32ArrayArg(int32ArrayArg);
@@ -5647,6 +5678,7 @@ static void voidMethodUint8ArrayArgMethod(const v8::FunctionCallbackInfo<v8::Val
     Uint8Array* uint8ArrayArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(uint8ArrayArg, info[0]->IsUint8Array() ? V8Uint8Array::toNative(v8::Handle<v8::Uint8Array>::Cast(info[0])) : 0);
     }
     impl->voidMethodUint8ArrayArg(uint8ArrayArg);
@@ -5708,6 +5740,7 @@ static void voidMethodArrayLongArgMethod(const v8::FunctionCallbackInfo<v8::Valu
     Vector<int> arrayLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(arrayLongArg, toNativeArray<int>(info[0], 1, info.GetIsolate()));
     }
     impl->voidMethodArrayLongArg(arrayLongArg);
@@ -5730,6 +5763,7 @@ static void voidMethodArrayStringArgMethod(const v8::FunctionCallbackInfo<v8::Va
     Vector<String> arrayStringArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(arrayStringArg, toNativeArray<String>(info[0], 1, info.GetIsolate()));
     }
     impl->voidMethodArrayStringArg(arrayStringArg);
@@ -5752,6 +5786,7 @@ static void voidMethodArrayTestInterfaceEmptyArgMethod(const v8::FunctionCallbac
     Vector<RefPtr<TestInterfaceEmpty> > arrayTestInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(arrayTestInterfaceEmptyArg, (toRefPtrNativeArray<TestInterfaceEmpty, V8TestInterfaceEmpty>(info[0], 1, info.GetIsolate())));
     }
     impl->voidMethodArrayTestInterfaceEmptyArg(arrayTestInterfaceEmptyArg);
@@ -5813,6 +5848,7 @@ static void voidMethodSequenceLongArgMethod(const v8::FunctionCallbackInfo<v8::V
     Vector<int> longSequenceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(longSequenceArg, toNativeArray<int>(info[0], 1, info.GetIsolate()));
     }
     impl->voidMethodSequenceLongArg(longSequenceArg);
@@ -5835,6 +5871,7 @@ static void voidMethodSequenceStringArgMethod(const v8::FunctionCallbackInfo<v8:
     Vector<String> stringSequenceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(stringSequenceArg, toNativeArray<String>(info[0], 1, info.GetIsolate()));
     }
     impl->voidMethodSequenceStringArg(stringSequenceArg);
@@ -5857,6 +5894,7 @@ static void voidMethodSequenceTestInterfaceEmptyArgMethod(const v8::FunctionCall
     Vector<RefPtr<TestInterfaceEmpty> > testInterfaceEmptySequenceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptySequenceArg, (toRefPtrNativeArray<TestInterfaceEmpty, V8TestInterfaceEmpty>(info[0], 1, info.GetIsolate())));
     }
     impl->voidMethodSequenceTestInterfaceEmptyArg(testInterfaceEmptySequenceArg);
@@ -5879,6 +5917,7 @@ static void voidMethodTestInterfaceEmptyOrNullArgMethod(const v8::FunctionCallba
     TestInterfaceEmpty* nullableTestInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(nullableTestInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodTestInterfaceEmptyOrNullArg(nullableTestInterfaceEmptyArg);
@@ -5987,11 +6026,11 @@ static void voidMethodTestEnumArgMethod(const v8::FunctionCallbackInfo<v8::Value
     V8StringResource<> testEnumTypeArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TOSTRING_VOID_INTERNAL(testEnumTypeArg, info[0]);
         String string = testEnumTypeArg;
         if (!(string == "" || string == "EnumValue1" || string == "EnumValue2" || string == "EnumValue3")) {
             throwTypeError(ExceptionMessages::failedToExecute("voidMethodTestEnumArg", "TestObject", "parameter 1 ('" + string + "') is not a valid enum value."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
     }
@@ -6080,10 +6119,10 @@ static void voidMethodDictionaryArgMethod(const v8::FunctionCallbackInfo<v8::Val
     Dictionary dictionaryArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(dictionaryArg, Dictionary(info[0], info.GetIsolate()));
         if (!dictionaryArg.isUndefinedOrNull() && !dictionaryArg.isObject()) {
             throwTypeError(ExceptionMessages::failedToExecute("voidMethodDictionaryArg", "TestObject", "parameter 1 ('dictionaryArg') is not an object."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
     }
@@ -6131,6 +6170,7 @@ static void voidMethodNodeFilterArgMethod(const v8::FunctionCallbackInfo<v8::Val
     RefPtrWillBeRawPtr<NodeFilter> nodeFilterArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(nodeFilterArg, toNodeFilter(info[0], info.Holder(), ScriptState::current(info.GetIsolate())));
     }
     impl->voidMethodNodeFilterArg(nodeFilterArg.release());
@@ -6153,10 +6193,10 @@ static void voidMethodPromiseArgMethod(const v8::FunctionCallbackInfo<v8::Value>
     ScriptPromise promiseArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(promiseArg, ScriptPromise::cast(ScriptState::current(info.GetIsolate()), info[0]));
         if (!promiseArg.isUndefinedOrNull() && !promiseArg.isObject()) {
             throwTypeError(ExceptionMessages::failedToExecute("voidMethodPromiseArg", "TestObject", "parameter 1 ('promiseArg') is not an object."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
     }
@@ -6206,6 +6246,7 @@ static void voidMethodXPathNSResolverArgMethod(const v8::FunctionCallbackInfo<v8
     RefPtrWillBeRawPtr<XPathNSResolver> xPathNSResolverArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(xPathNSResolverArg, toXPathNSResolver(info[0], info.GetIsolate()));
     }
     impl->voidMethodXPathNSResolverArg(xPathNSResolverArg.release());
@@ -6228,6 +6269,7 @@ static void voidMethodDictionarySequenceArgMethod(const v8::FunctionCallbackInfo
     Vector<Dictionary> dictionarySequenceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(dictionarySequenceArg, toNativeArray<Dictionary>(info[0], 1, info.GetIsolate()));
     }
     impl->voidMethodDictionarySequenceArg(dictionarySequenceArg);
@@ -6252,6 +6294,7 @@ static void voidMethodStringArgLongArgMethod(const v8::FunctionCallbackInfo<v8::
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TOSTRING_VOID_INTERNAL(stringArg, info[0]);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[1], exceptionState), exceptionState);
     }
@@ -6274,7 +6317,7 @@ static void voidMethodOptionalStringArgMethod(const v8::FunctionCallbackInfo<v8:
             impl->voidMethodOptionalStringArg();
             return;
         }
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(optionalStringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(optionalStringArg, info[0]);
     }
     impl->voidMethodOptionalStringArg(optionalStringArg);
 }
@@ -6292,6 +6335,7 @@ static void voidMethodOptionalTestInterfaceEmptyArgMethod(const v8::FunctionCall
     TestInterfaceEmpty* optionalTestInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             impl->voidMethodOptionalTestInterfaceEmptyArg();
             return;
@@ -6315,6 +6359,7 @@ static void voidMethodOptionalLongArgMethod(const v8::FunctionCallbackInfo<v8::V
     int optionalLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             impl->voidMethodOptionalLongArg();
             return;
@@ -6338,6 +6383,7 @@ static void stringMethodOptionalLongArgMethod(const v8::FunctionCallbackInfo<v8:
     int optionalLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             v8SetReturnValueString(info, impl->stringMethodOptionalLongArg(), info.GetIsolate());
             return;
@@ -6361,6 +6407,7 @@ static void testInterfaceEmptyMethodOptionalLongArgMethod(const v8::FunctionCall
     int optionalLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             v8SetReturnValue(info, impl->testInterfaceEmptyMethodOptionalLongArg());
             return;
@@ -6384,6 +6431,7 @@ static void longMethodOptionalLongArgMethod(const v8::FunctionCallbackInfo<v8::V
     int optionalLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             v8SetReturnValueInt(info, impl->longMethodOptionalLongArg());
             return;
@@ -6412,6 +6460,7 @@ static void voidMethodLongArgOptionalLongArgMethod(const v8::FunctionCallbackInf
     int optionalLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
         if (UNLIKELY(info.Length() <= 1)) {
             impl->voidMethodLongArgOptionalLongArg(longArg);
@@ -6442,6 +6491,7 @@ static void voidMethodLongArgOptionalLongArgOptionalLongArgMethod(const v8::Func
     int optionalLongArg2;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
         if (UNLIKELY(info.Length() <= 1)) {
             impl->voidMethodLongArgOptionalLongArgOptionalLongArg(longArg);
@@ -6476,6 +6526,7 @@ static void voidMethodLongArgOptionalTestInterfaceEmptyArgMethod(const v8::Funct
     TestInterfaceEmpty* optionalTestInterfaceEmpty;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
         if (UNLIKELY(info.Length() <= 1)) {
             impl->voidMethodLongArgOptionalTestInterfaceEmptyArg(longArg);
@@ -6505,6 +6556,7 @@ static void voidMethodTestInterfaceEmptyArgOptionalLongArgMethod(const v8::Funct
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(optionalTestInterfaceEmpty, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
         if (UNLIKELY(info.Length() <= 1)) {
             impl->voidMethodTestInterfaceEmptyArgOptionalLongArg(optionalTestInterfaceEmpty);
@@ -6528,10 +6580,10 @@ static void voidMethodOptionalDictionaryArgMethod(const v8::FunctionCallbackInfo
     Dictionary optionalDictionaryArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(optionalDictionaryArg, Dictionary(info[0], info.GetIsolate()));
         if (!optionalDictionaryArg.isUndefinedOrNull() && !optionalDictionaryArg.isObject()) {
             throwTypeError(ExceptionMessages::failedToExecute("voidMethodOptionalDictionaryArg", "TestObject", "parameter 1 ('optionalDictionaryArg') is not an object."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
     }
@@ -6551,6 +6603,7 @@ static void voidMethodVariadicStringArgMethod(const v8::FunctionCallbackInfo<v8:
     Vector<String> variadicStringArgs;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(variadicStringArgs, toNativeArguments<String>(info, 0));
     }
     impl->voidMethodVariadicStringArg(variadicStringArgs);
@@ -6574,6 +6627,7 @@ static void voidMethodStringArgVariadicStringArgMethod(const v8::FunctionCallbac
     Vector<String> variadicStringArgs;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TOSTRING_VOID_INTERNAL(stringArg, info[0]);
         TONATIVE_VOID_INTERNAL(variadicStringArgs, toNativeArguments<String>(info, 1));
     }
@@ -6621,11 +6675,11 @@ static void voidMethodTestInterfaceEmptyArgVariadicTestInterfaceEmptyArgMethod(c
     Vector<RefPtr<TestInterfaceEmpty> > variadicTestInterfaceEmptyArgs;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
         for (int i = 1; i < info.Length(); ++i) {
             if (!V8TestInterfaceEmpty::hasInstance(info[i], info.GetIsolate())) {
                 throwTypeError(ExceptionMessages::failedToExecute("voidMethodTestInterfaceEmptyArgVariadicTestInterfaceEmptyArg", "TestObject", "parameter 2 is not of type 'TestInterfaceEmpty'."), info.GetIsolate());
-                block.ReThrow();
                 return;
             }
             variadicTestInterfaceEmptyArgs.append(V8TestInterfaceEmpty::toNative(v8::Handle<v8::Object>::Cast(info[i])));
@@ -6694,6 +6748,7 @@ static void overloadedMethodA1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedMethodA(longArg);
@@ -6707,6 +6762,7 @@ static void overloadedMethodA2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg2;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg1, toInt32(info[0], exceptionState), exceptionState);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg2, toInt32(info[1], exceptionState), exceptionState);
     }
@@ -6753,6 +6809,7 @@ static void overloadedMethodB1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedMethodB(longArg);
@@ -6766,6 +6823,7 @@ static void overloadedMethodB2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TOSTRING_VOID_INTERNAL(stringArg, info[0]);
         if (UNLIKELY(info.Length() <= 1)) {
             impl->overloadedMethodB(stringArg);
@@ -6820,6 +6878,7 @@ static void overloadedMethodC1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedMethodC(longArg);
@@ -6831,6 +6890,7 @@ static void overloadedMethodC2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->overloadedMethodC(testInterfaceEmptyArg);
@@ -6874,6 +6934,7 @@ static void overloadedMethodD1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedMethodD(longArg);
@@ -6885,6 +6946,7 @@ static void overloadedMethodD2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     Vector<int> longArrayArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(longArrayArg, toNativeArray<int>(info[0], 1, info.GetIsolate()));
     }
     impl->overloadedMethodD(longArrayArg);
@@ -6928,6 +6990,7 @@ static void overloadedMethodE1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedMethodE(longArg);
@@ -6939,6 +7002,7 @@ static void overloadedMethodE2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     TestInterfaceEmpty* testInterfaceEmptyOrNullArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyOrNullArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->overloadedMethodE(testInterfaceEmptyOrNullArg);
@@ -6988,7 +7052,7 @@ static void overloadedMethodF1Method(const v8::FunctionCallbackInfo<v8::Value>& 
             impl->overloadedMethodF();
             return;
         }
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(stringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(stringArg, info[0]);
     }
     impl->overloadedMethodF(stringArg);
 }
@@ -6999,6 +7063,7 @@ static void overloadedMethodF2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     double doubleArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(doubleArg, static_cast<double>(info[0]->NumberValue()));
     }
     impl->overloadedMethodF(doubleArg);
@@ -7052,6 +7117,7 @@ static void overloadedMethodG1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedMethodG(longArg);
@@ -7063,6 +7129,7 @@ static void overloadedMethodG2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     TestInterfaceEmpty* testInterfaceEmptyOrNullArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyOrNullArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->overloadedMethodG(testInterfaceEmptyOrNullArg);
@@ -7109,6 +7176,7 @@ static void overloadedMethodH1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     TestInterfaceImplementation* testInterfaceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceArg, V8TestInterface::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->overloadedMethodH(testInterfaceArg);
@@ -7120,6 +7188,7 @@ static void overloadedMethodH2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->overloadedMethodH(testInterfaceEmptyArg);
@@ -7161,7 +7230,7 @@ static void overloadedMethodI1Method(const v8::FunctionCallbackInfo<v8::Value>& 
     TestObject* impl = V8TestObject::toNative(info.Holder());
     V8StringResource<> stringArg;
     {
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(stringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(stringArg, info[0]);
     }
     impl->overloadedMethodI(stringArg);
 }
@@ -7172,6 +7241,7 @@ static void overloadedMethodI2Method(const v8::FunctionCallbackInfo<v8::Value>& 
     double doubleArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(doubleArg, static_cast<double>(info[0]->NumberValue()));
     }
     impl->overloadedMethodI(doubleArg);
@@ -7227,6 +7297,7 @@ static void overloadedPerWorldBindingsMethod2Method(const v8::FunctionCallbackIn
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedPerWorldBindingsMethod(longArg);
@@ -7272,6 +7343,7 @@ static void overloadedPerWorldBindingsMethod2MethodForMainWorld(const v8::Functi
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->overloadedPerWorldBindingsMethod(longArg);
@@ -7316,6 +7388,7 @@ static void overloadedStaticMethod1Method(const v8::FunctionCallbackInfo<v8::Val
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     TestObject::overloadedStaticMethod(longArg);
@@ -7328,6 +7401,7 @@ static void overloadedStaticMethod2Method(const v8::FunctionCallbackInfo<v8::Val
     int longArg2;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg1, toInt32(info[0], exceptionState), exceptionState);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg2, toInt32(info[1], exceptionState), exceptionState);
     }
@@ -7378,6 +7452,7 @@ static void voidMethodClampUnsignedShortArgMethod(const v8::FunctionCallbackInfo
     unsigned clampUnsignedShortArg = 0;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         double clampUnsignedShortArgNativeValue;
         TONATIVE_VOID_INTERNAL(clampUnsignedShortArgNativeValue, info[0]->NumberValue());
         if (!std::isnan(clampUnsignedShortArgNativeValue))
@@ -7404,6 +7479,7 @@ static void voidMethodClampUnsignedLongArgMethod(const v8::FunctionCallbackInfo<
     unsigned clampUnsignedLongArg = 0;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         double clampUnsignedLongArgNativeValue;
         TONATIVE_VOID_INTERNAL(clampUnsignedLongArgNativeValue, info[0]->NumberValue());
         if (!std::isnan(clampUnsignedLongArgNativeValue))
@@ -7425,6 +7501,7 @@ static void voidMethodDefaultUndefinedTestInterfaceEmptyArgMethod(const v8::Func
     TestInterfaceEmpty* defaultUndefinedTestInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(defaultUndefinedTestInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->voidMethodDefaultUndefinedTestInterfaceEmptyArg(defaultUndefinedTestInterfaceEmptyArg);
@@ -7444,6 +7521,7 @@ static void voidMethodDefaultUndefinedLongArgMethod(const v8::FunctionCallbackIn
     int defaultUndefinedLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(defaultUndefinedLongArg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->voidMethodDefaultUndefinedLongArg(defaultUndefinedLongArg);
@@ -7461,7 +7539,7 @@ static void voidMethodDefaultUndefinedStringArgMethod(const v8::FunctionCallback
     TestObject* impl = V8TestObject::toNative(info.Holder());
     V8StringResource<> defaultUndefinedStringArg;
     {
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(defaultUndefinedStringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(defaultUndefinedStringArg, info[0]);
     }
     impl->voidMethodDefaultUndefinedStringArg(defaultUndefinedStringArg);
 }
@@ -7478,7 +7556,7 @@ static void voidMethodDefaultNullStringStringArgMethod(const v8::FunctionCallbac
     TestObject* impl = V8TestObject::toNative(info.Holder());
     V8StringResource<> defaultNullStringStringArg;
     {
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(defaultNullStringStringArg, argumentOrNull(info, 0));
+        TOSTRING_VOID_INTERNAL(defaultNullStringStringArg, argumentOrNull(info, 0));
     }
     impl->voidMethodDefaultNullStringStringArg(defaultNullStringStringArg);
 }
@@ -7501,6 +7579,7 @@ static void voidMethodEnforceRangeLongArgMethod(const v8::FunctionCallbackInfo<v
     int enforceRangeLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(enforceRangeLongArg, toInt32(info[0], EnforceRange, exceptionState), exceptionState);
     }
     impl->voidMethodEnforceRangeLongArg(enforceRangeLongArg);
@@ -7522,7 +7601,7 @@ static void voidMethodTreatNullAsNullStringStringArgMethod(const v8::FunctionCal
     TestObject* impl = V8TestObject::toNative(info.Holder());
     V8StringResource<WithNullCheck> treatNullAsNullStringStringArg;
     {
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(treatNullAsNullStringStringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(treatNullAsNullStringStringArg, info[0]);
     }
     impl->voidMethodTreatNullAsNullStringStringArg(treatNullAsNullStringStringArg);
 }
@@ -7543,7 +7622,7 @@ static void voidMethodTreatNullAsNullStringTreatUndefinedAsNullStringStringArgMe
     TestObject* impl = V8TestObject::toNative(info.Holder());
     V8StringResource<WithUndefinedOrNullCheck> treatNullAsNullStringStringArg;
     {
-        TOSTRING_VOID_INTERNAL_NOTRYCATCH(treatNullAsNullStringStringArg, info[0]);
+        TOSTRING_VOID_INTERNAL(treatNullAsNullStringStringArg, info[0]);
     }
     impl->voidMethodTreatNullAsNullStringTreatUndefinedAsNullStringStringArg(treatNullAsNullStringStringArg);
 }
@@ -7564,10 +7643,10 @@ static void activityLoggingAccessForAllWorldsMethodMethod(const v8::FunctionCall
 static void activityLoggingAccessForAllWorldsMethodMethodCallback(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMMethod");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         Vector<v8::Handle<v8::Value> > loggerArgs = toNativeArguments<v8::Handle<v8::Value> >(info, 0);
-        world.activityLogger()->logMethod("TestObject.activityLoggingAccessForAllWorldsMethod", info.Length(), loggerArgs.data());
+        contextData->activityLogger()->logMethod("TestObject.activityLoggingAccessForAllWorldsMethod", info.Length(), loggerArgs.data());
     }
     TestObjectV8Internal::activityLoggingAccessForAllWorldsMethodMethod(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -7635,7 +7714,7 @@ static void callWithScriptStateScriptArgumentsVoidMethodMethod(const v8::Functio
 {
     TestObject* impl = V8TestObject::toNative(info.Holder());
     ScriptState* scriptState = ScriptState::current(info.GetIsolate());
-    RefPtr<ScriptArguments> scriptArguments(createScriptArguments(info, 0));
+    RefPtr<ScriptArguments> scriptArguments(createScriptArguments(scriptState, info, 0));
     impl->callWithScriptStateScriptArgumentsVoidMethod(scriptState, scriptArguments.release());
 }
 
@@ -7652,16 +7731,17 @@ static void callWithScriptStateScriptArgumentsVoidMethodOptionalBooleanArgMethod
     bool optionalBooleanArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             ScriptState* scriptState = ScriptState::current(info.GetIsolate());
-            RefPtr<ScriptArguments> scriptArguments(createScriptArguments(info, 1));
+            RefPtr<ScriptArguments> scriptArguments(createScriptArguments(scriptState, info, 1));
             impl->callWithScriptStateScriptArgumentsVoidMethodOptionalBooleanArg(scriptState, scriptArguments.release());
             return;
         }
         TONATIVE_VOID_INTERNAL(optionalBooleanArg, info[0]->BooleanValue());
     }
     ScriptState* scriptState = ScriptState::current(info.GetIsolate());
-    RefPtr<ScriptArguments> scriptArguments(createScriptArguments(info, 1));
+    RefPtr<ScriptArguments> scriptArguments(createScriptArguments(scriptState, info, 1));
     impl->callWithScriptStateScriptArgumentsVoidMethodOptionalBooleanArg(scriptState, scriptArguments.release(), optionalBooleanArg);
 }
 
@@ -7863,6 +7943,7 @@ static void DeprecateAsOverloadedMethod2Method(const v8::FunctionCallbackInfo<v8
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->DeprecateAsOverloadedMethod(arg);
@@ -7916,6 +7997,7 @@ static void DeprecateAsSameValueOverloadedMethod2Method(const v8::FunctionCallba
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->DeprecateAsSameValueOverloadedMethod(arg);
@@ -7968,6 +8050,7 @@ static void measureAsOverloadedMethod2Method(const v8::FunctionCallbackInfo<v8::
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->measureAsOverloadedMethod(arg);
@@ -8021,6 +8104,7 @@ static void measureAsSameValueOverloadedMethod2Method(const v8::FunctionCallback
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->measureAsSameValueOverloadedMethod(arg);
@@ -8073,6 +8157,7 @@ static void deprecateAsMeasureAsSameValueOverloadedMethod2Method(const v8::Funct
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->deprecateAsMeasureAsSameValueOverloadedMethod(arg);
@@ -8127,6 +8212,7 @@ static void deprecateAsSameValueMeasureAsOverloadedMethod2Method(const v8::Funct
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->deprecateAsSameValueMeasureAsOverloadedMethod(arg);
@@ -8181,6 +8267,7 @@ static void deprecateAsSameValueMeasureAsSameValueOverloadedMethod2Method(const 
     int arg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(arg, toInt32(info[0], exceptionState), exceptionState);
     }
     impl->deprecateAsSameValueMeasureAsSameValueOverloadedMethod(arg);
@@ -8283,6 +8370,7 @@ static void perWorldBindingsVoidMethodTestInterfaceEmptyArgMethod(const v8::Func
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->perWorldBindingsVoidMethodTestInterfaceEmptyArg(testInterfaceEmptyArg);
@@ -8305,6 +8393,7 @@ static void perWorldBindingsVoidMethodTestInterfaceEmptyArgMethodForMainWorld(co
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->perWorldBindingsVoidMethodTestInterfaceEmptyArg(testInterfaceEmptyArg);
@@ -8326,10 +8415,10 @@ static void activityLoggingForAllWorldsPerWorldBindingsVoidMethodMethod(const v8
 static void activityLoggingForAllWorldsPerWorldBindingsVoidMethodMethodCallback(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMMethod");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         Vector<v8::Handle<v8::Value> > loggerArgs = toNativeArguments<v8::Handle<v8::Value> >(info, 0);
-        world.activityLogger()->logMethod("TestObject.activityLoggingForAllWorldsPerWorldBindingsVoidMethod", info.Length(), loggerArgs.data());
+        contextData->activityLogger()->logMethod("TestObject.activityLoggingForAllWorldsPerWorldBindingsVoidMethod", info.Length(), loggerArgs.data());
     }
     TestObjectV8Internal::activityLoggingForAllWorldsPerWorldBindingsVoidMethodMethod(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -8344,10 +8433,10 @@ static void activityLoggingForAllWorldsPerWorldBindingsVoidMethodMethodForMainWo
 static void activityLoggingForAllWorldsPerWorldBindingsVoidMethodMethodCallbackForMainWorld(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMMethod");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         Vector<v8::Handle<v8::Value> > loggerArgs = toNativeArguments<v8::Handle<v8::Value> >(info, 0);
-        world.activityLogger()->logMethod("TestObject.activityLoggingForAllWorldsPerWorldBindingsVoidMethod", info.Length(), loggerArgs.data());
+        contextData->activityLogger()->logMethod("TestObject.activityLoggingForAllWorldsPerWorldBindingsVoidMethod", info.Length(), loggerArgs.data());
     }
     TestObjectV8Internal::activityLoggingForAllWorldsPerWorldBindingsVoidMethodMethodForMainWorld(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -8362,10 +8451,10 @@ static void activityLoggingForIsolatedWorldsPerWorldBindingsVoidMethodMethod(con
 static void activityLoggingForIsolatedWorldsPerWorldBindingsVoidMethodMethodCallback(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     TRACE_EVENT_SET_SAMPLING_STATE("Blink", "DOMMethod");
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         Vector<v8::Handle<v8::Value> > loggerArgs = toNativeArguments<v8::Handle<v8::Value> >(info, 0);
-        world.activityLogger()->logMethod("TestObject.activityLoggingForIsolatedWorldsPerWorldBindingsVoidMethod", info.Length(), loggerArgs.data());
+        contextData->activityLogger()->logMethod("TestObject.activityLoggingForIsolatedWorldsPerWorldBindingsVoidMethod", info.Length(), loggerArgs.data());
     }
     TestObjectV8Internal::activityLoggingForIsolatedWorldsPerWorldBindingsVoidMethodMethod(info);
     TRACE_EVENT_SET_SAMPLING_STATE("V8", "V8Execution");
@@ -8428,6 +8517,7 @@ static void raisesExceptionVoidMethodOptionalLongArgMethod(const v8::FunctionCal
     int optionalLongArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (UNLIKELY(info.Length() <= 0)) {
             impl->raisesExceptionVoidMethodOptionalLongArg(exceptionState);
             if (exceptionState.hadException()) {
@@ -8542,6 +8632,7 @@ static void callWithExecutionContextRaisesExceptionVoidMethodLongArgMethod(const
     int longArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_EXCEPTIONSTATE_INTERNAL(longArg, toInt32(info[0], exceptionState), exceptionState);
     }
     ExecutionContext* scriptContext = currentExecutionContext(info.GetIsolate());
@@ -8660,9 +8751,9 @@ static void typeCheckingInterfaceVoidMethodTestInterfaceEmptyArgMethod(const v8:
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (info.Length() > 0 && !V8TestInterfaceEmpty::hasInstance(info[0], info.GetIsolate())) {
             throwTypeError(ExceptionMessages::failedToExecute("typeCheckingInterfaceVoidMethodTestInterfaceEmptyArg", "TestObject", "parameter 1 is not of type 'TestInterfaceEmpty'."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
@@ -8687,6 +8778,7 @@ static void typeCheckingNullableVoidMethodTestInterfaceEmptyOrNullArgMethod(cons
     TestInterfaceEmpty* testInterfaceEmptyOrNullArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyOrNullArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
     }
     impl->typeCheckingNullableVoidMethodTestInterfaceEmptyOrNullArg(testInterfaceEmptyOrNullArg);
@@ -8709,9 +8801,9 @@ static void typeCheckingInterfaceNullableVoidMethodTestInterfaceEmptyOrNullArgMe
     TestInterfaceEmpty* testInterfaceEmptyOrNullArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         if (info.Length() > 0 && !isUndefinedOrNull(info[0]) && !V8TestInterfaceEmpty::hasInstance(info[0], info.GetIsolate())) {
             throwTypeError(ExceptionMessages::failedToExecute("typeCheckingInterfaceNullableVoidMethodTestInterfaceEmptyOrNullArg", "TestObject", "parameter 1 is not of type 'TestInterfaceEmpty'."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
         TONATIVE_VOID_INTERNAL(testInterfaceEmptyOrNullArg, V8TestInterfaceEmpty::toNativeWithTypeCheck(info.GetIsolate(), info[0]));
@@ -8737,16 +8829,15 @@ static void typeCheckingUnrestrictedVoidMethodFloatArgDoubleArgMethod(const v8::
     double doubleArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(floatArg, static_cast<float>(info[0]->NumberValue()));
         if (!std::isfinite(floatArg)) {
             throwTypeError(ExceptionMessages::failedToExecute("typeCheckingUnrestrictedVoidMethodFloatArgDoubleArg", "TestObject", "float parameter 1 is non-finite."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
         TONATIVE_VOID_INTERNAL(doubleArg, static_cast<double>(info[1]->NumberValue()));
         if (!std::isfinite(doubleArg)) {
             throwTypeError(ExceptionMessages::failedToExecute("typeCheckingUnrestrictedVoidMethodFloatArgDoubleArg", "TestObject", "double parameter 2 is non-finite."), info.GetIsolate());
-            block.ReThrow();
             return;
         }
     }
@@ -8783,6 +8874,7 @@ static void voidMethodTestInterfaceGarbageCollectedSequenceArgMethod(const v8::F
     HeapVector<Member<TestInterfaceGarbageCollected> > testInterfaceGarbageCollectedSequenceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceGarbageCollectedSequenceArg, (toMemberNativeArray<TestInterfaceGarbageCollected, V8TestInterfaceGarbageCollected>(info[0], 1, info.GetIsolate())));
     }
     impl->voidMethodTestInterfaceGarbageCollectedSequenceArg(testInterfaceGarbageCollectedSequenceArg);
@@ -8805,6 +8897,7 @@ static void voidMethodTestInterfaceGarbageCollectedArrayArgMethod(const v8::Func
     HeapVector<Member<TestInterfaceGarbageCollected> > testInterfaceGarbageCollectedArrayArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceGarbageCollectedArrayArg, (toMemberNativeArray<TestInterfaceGarbageCollected, V8TestInterfaceGarbageCollected>(info[0], 1, info.GetIsolate())));
     }
     impl->voidMethodTestInterfaceGarbageCollectedArrayArg(testInterfaceGarbageCollectedArrayArg);
@@ -8827,6 +8920,7 @@ static void voidMethodTestInterfaceWillBeGarbageCollectedSequenceArgMethod(const
     WillBeHeapVector<RefPtrWillBeMember<TestInterfaceWillBeGarbageCollected> > testInterfaceWillBeGarbageCollectedSequenceArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceWillBeGarbageCollectedSequenceArg, (toRefPtrWillBeMemberNativeArray<TestInterfaceWillBeGarbageCollected, V8TestInterfaceWillBeGarbageCollected>(info[0], 1, info.GetIsolate())));
     }
     impl->voidMethodTestInterfaceWillBeGarbageCollectedSequenceArg(testInterfaceWillBeGarbageCollectedSequenceArg);
@@ -8849,6 +8943,7 @@ static void voidMethodTestInterfaceWillBeGarbageCollectedArrayArgMethod(const v8
     WillBeHeapVector<RefPtrWillBeMember<TestInterfaceWillBeGarbageCollected> > testInterfaceWillBeGarbageCollectedArrayArg;
     {
         v8::TryCatch block;
+        V8RethrowTryCatchScope rethrow(block);
         TONATIVE_VOID_INTERNAL(testInterfaceWillBeGarbageCollectedArrayArg, (toRefPtrWillBeMemberNativeArray<TestInterfaceWillBeGarbageCollected, V8TestInterfaceWillBeGarbageCollected>(info[0], 1, info.GetIsolate())));
     }
     impl->voidMethodTestInterfaceWillBeGarbageCollectedArrayArg(testInterfaceWillBeGarbageCollectedArrayArg);
@@ -9119,12 +9214,12 @@ static const V8DOMConfiguration::MethodConfiguration V8TestObjectMethods[] = {
     {"voidMethodLongArgOptionalTestInterfaceEmptyArg", TestObjectV8Internal::voidMethodLongArgOptionalTestInterfaceEmptyArgMethodCallback, 0, 1},
     {"voidMethodTestInterfaceEmptyArgOptionalLongArg", TestObjectV8Internal::voidMethodTestInterfaceEmptyArgOptionalLongArgMethodCallback, 0, 1},
     {"voidMethodOptionalDictionaryArg", TestObjectV8Internal::voidMethodOptionalDictionaryArgMethodCallback, 0, 0},
-    {"voidMethodVariadicStringArg", TestObjectV8Internal::voidMethodVariadicStringArgMethodCallback, 0, 1},
-    {"voidMethodStringArgVariadicStringArg", TestObjectV8Internal::voidMethodStringArgVariadicStringArgMethodCallback, 0, 2},
-    {"voidMethodVariadicTestInterfaceEmptyArg", TestObjectV8Internal::voidMethodVariadicTestInterfaceEmptyArgMethodCallback, 0, 1},
-    {"voidMethodTestInterfaceEmptyArgVariadicTestInterfaceEmptyArg", TestObjectV8Internal::voidMethodTestInterfaceEmptyArgVariadicTestInterfaceEmptyArgMethodCallback, 0, 2},
-    {"voidMethodVariadicTestInterfaceGarbageCollectedArg", TestObjectV8Internal::voidMethodVariadicTestInterfaceGarbageCollectedArgMethodCallback, 0, 1},
-    {"voidMethodVariadicTestInterfaceWillBeGarbageCollectedArg", TestObjectV8Internal::voidMethodVariadicTestInterfaceWillBeGarbageCollectedArgMethodCallback, 0, 1},
+    {"voidMethodVariadicStringArg", TestObjectV8Internal::voidMethodVariadicStringArgMethodCallback, 0, 0},
+    {"voidMethodStringArgVariadicStringArg", TestObjectV8Internal::voidMethodStringArgVariadicStringArgMethodCallback, 0, 1},
+    {"voidMethodVariadicTestInterfaceEmptyArg", TestObjectV8Internal::voidMethodVariadicTestInterfaceEmptyArgMethodCallback, 0, 0},
+    {"voidMethodTestInterfaceEmptyArgVariadicTestInterfaceEmptyArg", TestObjectV8Internal::voidMethodTestInterfaceEmptyArgVariadicTestInterfaceEmptyArgMethodCallback, 0, 1},
+    {"voidMethodVariadicTestInterfaceGarbageCollectedArg", TestObjectV8Internal::voidMethodVariadicTestInterfaceGarbageCollectedArgMethodCallback, 0, 0},
+    {"voidMethodVariadicTestInterfaceWillBeGarbageCollectedArg", TestObjectV8Internal::voidMethodVariadicTestInterfaceWillBeGarbageCollectedArgMethodCallback, 0, 0},
     {"overloadedMethodA", TestObjectV8Internal::overloadedMethodAMethodCallback, 0, 1},
     {"overloadedMethodB", TestObjectV8Internal::overloadedMethodBMethodCallback, 0, 1},
     {"overloadedMethodC", TestObjectV8Internal::overloadedMethodCMethodCallback, 0, 1},

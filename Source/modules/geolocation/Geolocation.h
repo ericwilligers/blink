@@ -44,7 +44,6 @@ class LocalFrame;
 class GeolocationController;
 class GeolocationError;
 class GeolocationPosition;
-class Page;
 class ExecutionContext;
 
 class Geolocation FINAL : public RefCountedWillBeGarbageCollectedFinalized<Geolocation>, public ScriptWrappable, public ActiveDOMObject
@@ -88,8 +87,6 @@ private:
 
     explicit Geolocation(ExecutionContext*);
 
-    Page* page() const;
-
     // Holds the success and error callbacks and the options that were provided
     // when a oneshot or watcher were created. Also, if specified in the
     // options, manages a timer to limit the time to wait for the system to
@@ -117,17 +114,13 @@ private:
         void runSuccessCallback(Geoposition*);
         void runErrorCallback(PositionError*);
 
-        // Starts the timer if a timeout was specified on the options.
-        void startTimerIfNeeded();
-
+        void startTimer();
         void stopTimer();
 
         // Runs the error callback if there is a fatal error. Otherwise, if a
         // cached position must be used, registers itself for receiving one.
         // Otherwise, the notifier has expired, and its error callback is run.
         void timerFired(Timer<GeoNotifier>*);
-
-        bool hasZeroTimeout() const;
 
     private:
         GeoNotifier(Geolocation*, PassOwnPtr<PositionCallback>, PassOwnPtr<PositionErrorCallback>, PassRefPtrWillBeRawPtr<PositionOptions>);

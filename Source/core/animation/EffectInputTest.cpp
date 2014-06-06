@@ -10,8 +10,8 @@
 #include "core/animation/KeyframeEffectModel.h"
 #include "core/dom/Document.h"
 #include "core/dom/Element.h"
-
 #include <gtest/gtest.h>
+#include <v8.h>
 
 using namespace WebCore;
 
@@ -23,17 +23,17 @@ protected:
         : document(Document::create())
         , element(document->createElement("foo", ASSERT_NO_EXCEPTION))
         , m_isolate(v8::Isolate::GetCurrent())
-        , m_scope(V8TestingScope::create(m_isolate))
+        , m_scope(m_isolate)
     {
     }
 
-    RefPtr<Document> document;
+    RefPtrWillBePersistent<Document> document;
     RefPtrWillBePersistent<Element> element;
     TrackExceptionState exceptionState;
     v8::Isolate* m_isolate;
 
 private:
-    OwnPtr<V8TestingScope> m_scope;
+    V8TestingScope m_scope;
 };
 
 TEST_F(AnimationEffectInputTest, SortedOffsets)

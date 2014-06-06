@@ -26,6 +26,7 @@
 #include "core/dom/Element.h"
 #include "core/events/Event.h"
 #include "core/fetch/ImageResource.h"
+#include "core/html/HTMLImageElement.h"
 #include "core/html/HTMLObjectElement.h"
 #include "core/html/parser/HTMLParserIdioms.h"
 
@@ -47,8 +48,10 @@ void HTMLImageLoader::dispatchLoadEvent()
         return;
 
     bool errorOccurred = image()->errorOccurred();
-    if (!errorOccurred && image()->response().httpStatusCode() >= 400)
-        errorOccurred = isHTMLObjectElement(*element()); // An <object> considers a 404 to be an error and should fire onerror.
+    if (isHTMLImageElement(*element()))
+        toHTMLImageElement(element())->updateCurrentSrc();
+    else if (isHTMLObjectElement(*element()) && !errorOccurred)
+        errorOccurred = (image()->response().httpStatusCode() >= 400); // An <object> considers a 404 to be an error and should fire onerror.
     element()->dispatchEvent(Event::create(errorOccurred ? EventTypeNames::error : EventTypeNames::load));
 }
 
@@ -61,7 +64,7 @@ void HTMLImageLoader::notifyFinished(Resource*)
 {
     ImageResource* cachedImage = image();
 
-    RefPtr<Element> element = this->element();
+    RefPtrWillBeRawPtr<Element> element = this->element();
     ImageLoader::notifyFinished(cachedImage);
 
     bool loadError = cachedImage->errorOccurred() || cachedImage->response().httpStatusCode() >= 400;

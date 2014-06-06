@@ -55,7 +55,7 @@ EncryptedMedia status=test
 EncryptedMediaAnyVersion status=stable
 ExperimentalCanvasFeatures status=test
 ExperimentalContentSecurityPolicyFeatures status=experimental
-ExperimentalWebSocket status=experimental
+ExperimentalWebSocket status=stable
 FileAPIBlobClose status=experimental
 FileConstructor status=experimental
 FileSystem status=stable
@@ -69,19 +69,20 @@ ImageDataConstructor status=experimental
 IndexedDBExperimental status=experimental
 InputModeAttribute status=experimental
 LangAttributeAwareFormControlUI
-LayerSquashing status=test
+LayerSquashing status=stable
 PrefixedEncryptedMedia status=stable
 LocalStorage status=stable
 Manifest status=test
 Media status=stable
 MediaController depends_on=Media, status=experimental
-MediaQueryParser status=test
+MediaQueryParser status=stable
 MediaSource status=stable
 MediaSourceExperimental depends_on=MediaSource, status=experimental
 MediaStream status=stable
 MemoryInfoInWorkers status=experimental
 NavigationTransitions status=experimental
 NavigatorContentUtils
+NetworkInformation status=experimental
 Notifications status=stable
 ObjectFitPosition status=stable
 OrientationEvent
@@ -100,7 +101,7 @@ RegionBasedColumns status=experimental
 
 // This is implementation flag for the re-write of the layout/paint system to
 // do painting after we have completed layout, instead of piecemeal during layout.
-RepaintAfterLayout status=test
+RepaintAfterLayout status=stable
 
 RequestAutocomplete status=test
 ScreenOrientation status=experimental
@@ -123,7 +124,7 @@ ShowModalDialog status=stable
 SpeechSynthesis status=stable
 Stream status=experimental
 StyleScoped status=experimental
-SubpixelFontScaling status=experimental
+SubpixelFontScaling status=stable
 SubresourceIntegrity status=test
 SVGPaintOrder status=stable
 

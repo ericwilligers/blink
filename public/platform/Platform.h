@@ -40,6 +40,7 @@
 #include "WebData.h"
 #include "WebGamepadListener.h"
 #include "WebGamepads.h"
+#include "WebGestureDevice.h"
 #include "WebGraphicsContext3D.h"
 #include "WebLocalizedString.h"
 #include "WebLockOrientationCallback.h"
@@ -593,8 +594,7 @@ public:
 
     // Creates a new fling animation curve instance for device |deviceSource|
     // with |velocity| and already scrolled |cumulativeScroll| pixels.
-    virtual WebGestureCurve* createFlingAnimationCurve(int deviceSource, const WebFloatPoint& velocity, const WebSize& cumulativeScroll) { return 0; }
-
+    virtual WebGestureCurve* createFlingAnimationCurve(WebGestureDevice deviceSource, const WebFloatPoint& velocity, const WebSize& cumulativeScroll) { return 0; }
 
     // WebRTC ----------------------------------------------------------
 
@@ -633,14 +633,18 @@ public:
 
 
     // Screen Orientation -------------------------------------------------
+    // FIXME: this is meant to be removed when the content layer will be updated.
 
-    virtual void setScreenOrientationListener(blink::WebScreenOrientationListener*) { }
     virtual void lockOrientation(WebScreenOrientationLockType) { }
     // Request a screen orientation lock and pass a |callback| object to be used
     // to notify of success/failure. The |callback| parameter is expected to be
     // owned by the implementation.
-    virtual void lockOrientation(WebScreenOrientationLockType, WebLockOrientationCallback* callback)
+    virtual void lockOrientation(WebScreenOrientationLockType orientation, WebLockOrientationCallback* callback)
     {
+        // FIXME: remove this when
+        // lockOrientation(orientation, callback) will be handled in Chromium.
+        lockOrientation(orientation);
+
         delete callback; // prevents memory leak if there is no implementation.
     }
     virtual void unlockOrientation() { }

@@ -331,6 +331,9 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
 {
     RenderBox::styleDidChange(diff, oldStyle);
 
+    if (isFloatingOrOutOfFlowPositioned() && oldStyle && !oldStyle->isFloating() && !oldStyle->hasOutOfFlowPosition() && parent() && parent()->isRenderBlockFlow())
+        toRenderBlock(parent())->removeAnonymousWrappersIfRequired();
+
     RenderStyle* newStyle = style();
 
     if (!isAnonymousBlock()) {
@@ -363,12 +366,14 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
         ResourceLoadPriorityOptimizer::resourceLoadPriorityOptimizer()->addRenderObject(this);
 }
 
-void RenderBlock::repaintTreeAfterLayout(const RenderLayerModelObject& repaintContainer)
+void RenderBlock::invalidateTreeAfterLayout(const RenderLayerModelObject& invalidationContainer)
 {
-    if (!shouldCheckForInvalidationAfterLayout())
-        return;
+    // Note, we don't want to early out here using shouldCheckForInvalidationAfterLayout as
+    // we have to make sure we go through any positioned objects as they won't be seen in
+    // the normal tree walk.
 
-    RenderBox::repaintTreeAfterLayout(repaintContainer);
+    if (shouldCheckForPaintInvalidationAfterLayout())
+        RenderBox::invalidateTreeAfterLayout(invalidationContainer);
 
     // Take care of positioned objects. This is required as LayoutState keeps a single clip rect.
     if (TrackedRendererListHashSet* positionedObjects = this->positionedObjects()) {
@@ -391,12 +396,12 @@ void RenderBlock::repaintTreeAfterLayout(const RenderLayerModelObject& repaintCo
                     // Currently, we will place absolutly positioned elements inside
                     // relatively positioned inline blocks in the wrong location. crbug.com/371485
                     LayoutStateDisabler disable(*this);
-                    box->repaintTreeAfterLayout(repaintContainerForChild);
+                    box->invalidateTreeAfterLayout(repaintContainerForChild);
                     continue;
                 }
             }
 
-            box->repaintTreeAfterLayout(repaintContainerForChild);
+            box->invalidateTreeAfterLayout(repaintContainerForChild);
         }
     }
 }
@@ -1078,6 +1083,25 @@ static bool canMergeContiguousAnonymousBlocks(RenderObject* oldChild, RenderObje
     // Make sure the types of the anonymous blocks match up.
     return prev->isAnonymousColumnsBlock() == next->isAnonymousColumnsBlock()
            && prev->isAnonymousColumnSpanBlock() == next->isAnonymousColumnSpanBlock();
+}
+
+void RenderBlock::removeAnonymousWrappersIfRequired()
+{
+    ASSERT(isRenderBlockFlow());
+    Vector<RenderBox*, 16> blocksToRemove;
+    for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        // There are still block children in the container, so any anonymous wrappers are still needed.
+        if (!child->isAnonymousBlock() && !child->isFloatingOrOutOfFlowPositioned())
+            return;
+        // We can't remove anonymous wrappers if they contain continuations as this means there are block children present.
+        if (child->isRenderBlock() && toRenderBlock(child)->continuation())
+            return;
+        if (child->isAnonymousBlock())
+            blocksToRemove.append(child);
+    }
+
+    for (size_t i = 0; i < blocksToRemove.size(); i++)
+        collapseAnonymousBlockChild(this, toRenderBlock(blocksToRemove[i]));
 }
 
 void RenderBlock::collapseAnonymousBlockChild(RenderBlock* parent, RenderBlock* child)
@@ -2802,7 +2826,18 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     // If we have clipping, then we can't have any spillout.
     bool useOverflowClip = hasOverflowClip() && !hasSelfPaintingLayer();
     bool useClip = (hasControlClip() || useOverflowClip);
-    bool checkChildren = !useClip || (hasControlClip() ? locationInContainer.intersects(controlClipRect(adjustedLocation)) : locationInContainer.intersects(overflowClipRect(adjustedLocation, IncludeOverlayScrollbarSize)));
+    bool checkChildren = !useClip;
+    if (!checkChildren) {
+        if (hasControlClip()) {
+            checkChildren = locationInContainer.intersects(controlClipRect(adjustedLocation));
+        } else {
+            LayoutRect clipRect = overflowClipRect(adjustedLocation, IncludeOverlayScrollbarSize);
+            if (style()->hasBorderRadius())
+                checkChildren = locationInContainer.intersects(style()->getRoundedBorderFor(clipRect));
+            else
+                checkChildren = locationInContainer.intersects(clipRect);
+        }
+    }
     if (checkChildren) {
         // Hit test descendants first.
         LayoutSize scrolledOffset(localOffset);
@@ -2824,7 +2859,7 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     }
 
     // Check if the point is outside radii.
-    if (!isRenderView() && style()->hasBorderRadius()) {
+    if (style()->hasBorderRadius()) {
         LayoutRect borderRect = borderBoxRect();
         borderRect.moveBy(adjustedLocation);
         RoundedRect border = style()->getRoundedBorderFor(borderRect);
@@ -3986,6 +4021,8 @@ void RenderBlock::updateFirstLetterStyle(RenderObject* firstLetterBlock, RenderO
     RenderStyle* pseudoStyle = styleForFirstLetter(firstLetterBlock, firstLetterContainer);
     ASSERT(firstLetter->isFloating() || firstLetter->isInline());
 
+    LayoutStateDisabler layoutStateDisabler(*this);
+
     if (RenderStyle::stylePropagationDiff(firstLetter->style(), pseudoStyle) == Reattach) {
         // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
         RenderBoxModelObject* newFirstLetter;
@@ -3996,7 +4033,6 @@ void RenderBlock::updateFirstLetterStyle(RenderObject* firstLetterBlock, RenderO
         newFirstLetter->setStyle(pseudoStyle);
 
         // Move the first letter into the new renderer.
-        LayoutStateDisabler layoutStateDisabler(*this);
         while (RenderObject* child = firstLetter->slowFirstChild()) {
             if (child->isText())
                 toRenderText(child)->removeAndDestroyTextBoxes();
@@ -4534,18 +4570,7 @@ void RenderBlock::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint& a
                 rects.append(pixelSnappedIntRect(rect));
         }
 
-        for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling()) {
-            if (!curr->isText() && !curr->isListMarker() && curr->isBox()) {
-                RenderBox* box = toRenderBox(curr);
-                FloatPoint pos;
-                // FIXME: This doesn't work correctly with transforms.
-                if (box->layer())
-                    pos = curr->localToContainerPoint(FloatPoint(), paintContainer);
-                else
-                    pos = FloatPoint((additionalOffset.x() + box->x()).toFloat(), (additionalOffset.y() + box->y()).toFloat()); // FIXME: Snap offsets? crbug.com/350474
-                box->addFocusRingRects(rects, flooredLayoutPoint(pos), paintContainer);
-            }
-        }
+        addChildFocusRingRects(rects, additionalOffset, paintContainer);
     }
 
     if (inlineElementContinuation())

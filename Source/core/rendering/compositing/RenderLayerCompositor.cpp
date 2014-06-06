@@ -35,7 +35,6 @@
 #include "core/dom/FullscreenElementStack.h"
 #include "core/dom/NodeList.h"
 #include "core/dom/ScriptForbiddenScope.h"
-#include "core/frame/DeprecatedScheduleStyleRecalcDuringCompositingUpdate.h"
 #include "core/frame/FrameView.h"
 #include "core/frame/LocalFrame.h"
 #include "core/frame/Settings.h"
@@ -112,11 +111,9 @@ RenderLayerCompositor::RenderLayerCompositor(RenderView& renderView)
     , m_compositingReasonFinder(renderView)
     , m_pendingUpdateType(CompositingUpdateNone)
     , m_hasAcceleratedCompositing(true)
-    , m_needsToRecomputeCompositingRequirements(false)
     , m_compositing(false)
     , m_compositingLayersNeedRebuild(false)
     , m_rootShouldAlwaysCompositeDirty(true)
-    , m_needsUpdateCompositingRequirementsState(false)
     , m_needsUpdateFixedBackground(false)
     , m_isTrackingRepaints(false)
     , m_rootLayerAttachment(RootLayerUnattached)
@@ -149,12 +146,22 @@ void RenderLayerCompositor::setCompositingModeEnabled(bool enable)
 
     m_compositing = enable;
 
+    // RenderPart::requiresAcceleratedCompositing is used to determine self-paintingness
+    // and bases it's return value for frames on the m_compositing bit here.
+    if (HTMLFrameOwnerElement* ownerElement = m_renderView.document().ownerElement()) {
+        if (RenderPart* renderer = ownerElement->renderPart())
+            renderer->layer()->updateSelfPaintingLayer();
+    }
+
     if (m_compositing)
         ensureRootLayer();
     else
         destroyRootLayer();
 
-    notifyIFramesOfCompositingChange();
+    // Compositing also affects the answer to RenderIFrame::requiresAcceleratedCompositing(), so
+    // we need to schedule a style recalc in our parent document.
+    if (HTMLFrameOwnerElement* ownerElement = m_renderView.document().ownerElement())
+        ownerElement->setNeedsCompositingUpdate();
 }
 
 void RenderLayerCompositor::enableCompositingModeIfNeeded()
@@ -220,27 +227,9 @@ bool RenderLayerCompositor::acceleratedCompositingForOverflowScrollEnabled() con
 void RenderLayerCompositor::setCompositingLayersNeedRebuild()
 {
     // FIXME: crbug.com/332248 ideally this could be merged with setNeedsCompositingUpdate().
-    // FIXME: We can remove the staleInCompositingMode check once we get rid of the
-    // forceCompositingMode setting.
-    if (staleInCompositingMode())
-        m_compositingLayersNeedRebuild = true;
+    m_compositingLayersNeedRebuild = true;
     page()->animator().scheduleVisualUpdate();
     lifecycle().ensureStateAtMost(DocumentLifecycle::LayoutClean);
-}
-
-void RenderLayerCompositor::updateCompositingRequirementsState()
-{
-    if (!m_needsUpdateCompositingRequirementsState)
-        return;
-
-    TRACE_EVENT0("blink_rendering,comp-scroll", "RenderLayerCompositor::updateCompositingRequirementsState");
-
-    m_needsUpdateCompositingRequirementsState = false;
-    if (!rootRenderLayer() || !acceleratedCompositingForOverflowScrollEnabled())
-        return;
-
-    for (HashSet<RenderLayer*>::iterator it = m_outOfFlowPositionedLayers.begin(); it != m_outOfFlowPositionedLayers.end(); ++it)
-        (*it)->updateHasUnclippedDescendant();
 }
 
 static RenderVideo* findFullscreenVideoRenderer(Document& document)
@@ -281,9 +270,11 @@ void RenderLayerCompositor::updateIfNeededRecursive()
     // TODO: Figure out why this fails on Chrome OS login page. crbug.com/365507
     // ASSERT(lifecycle().state() == DocumentLifecycle::CompositingClean);
 
+#if ASSERT_ENABLED
     assertNoUnresolvedDirtyBits();
     for (LocalFrame* child = m_renderView.frameView()->frame().tree().firstChild(); child; child = child->tree().nextSibling())
         child->contentRenderer()->compositor()->assertNoUnresolvedDirtyBits();
+#endif
 }
 
 void RenderLayerCompositor::setNeedsCompositingUpdate(CompositingUpdateType updateType)
@@ -308,14 +299,16 @@ void RenderLayerCompositor::setNeedsCompositingUpdate(CompositingUpdateType upda
     lifecycle().ensureStateAtMost(DocumentLifecycle::LayoutClean);
 }
 
+#if ASSERT_ENABLED
+
 void RenderLayerCompositor::assertNoUnresolvedDirtyBits()
 {
     ASSERT(!compositingLayersNeedRebuild());
-    ASSERT(!m_needsUpdateCompositingRequirementsState);
     ASSERT(m_pendingUpdateType == CompositingUpdateNone);
     ASSERT(!m_rootShouldAlwaysCompositeDirty);
-    ASSERT(!m_needsToRecomputeCompositingRequirements);
 }
+
+#endif
 
 void RenderLayerCompositor::applyOverlayFullscreenVideoAdjustment()
 {
@@ -356,7 +349,6 @@ void RenderLayerCompositor::updateIfNeeded()
         // We'll need to remove DeprecatedDirtyCompositingDuringCompositingUpdate
         // before moving this function after checking the dirty bits.
         DeprecatedDirtyCompositingDuringCompositingUpdate marker(lifecycle());
-        updateCompositingRequirementsState();
 
         // FIXME: enableCompositingModeIfNeeded can call setCompositingLayersNeedRebuild,
         // which asserts that it's not InCompositingUpdate.
@@ -364,18 +356,16 @@ void RenderLayerCompositor::updateIfNeeded()
     }
 
     CompositingUpdateType updateType = m_pendingUpdateType;
-    bool needCompositingRequirementsUpdate = m_needsToRecomputeCompositingRequirements;
     bool needHierarchyAndGeometryUpdate = compositingLayersNeedRebuild();
 
     m_pendingUpdateType = CompositingUpdateNone;
     m_compositingLayersNeedRebuild = false;
-    m_needsToRecomputeCompositingRequirements = false;
 
     if (!hasAcceleratedCompositing())
         return;
 
-    bool needsToUpdateScrollingCoordinator = scrollingCoordinator() ? scrollingCoordinator()->needsToUpdateAfterCompositingChange() : false;
-    if (updateType == CompositingUpdateNone && !needCompositingRequirementsUpdate && !needHierarchyAndGeometryUpdate && !needsToUpdateScrollingCoordinator)
+    bool needsToUpdateScrollingCoordinator = scrollingCoordinator() && scrollingCoordinator()->needsToUpdateAfterCompositingChange();
+    if (updateType == CompositingUpdateNone && !needHierarchyAndGeometryUpdate && !needsToUpdateScrollingCoordinator)
         return;
 
     GraphicsLayerUpdater::UpdateType graphicsLayerUpdateType = GraphicsLayerUpdater::DoNotForceUpdate;
@@ -389,12 +379,12 @@ void RenderLayerCompositor::updateIfNeeded()
 
     RenderLayer* updateRoot = rootRenderLayer();
 
-    if (needCompositingRequirementsUpdate || updateType >= CompositingUpdateAfterCompositingInputChange) {
+    if (updateType >= CompositingUpdateAfterCompositingInputChange) {
         bool layersChanged = false;
 
         {
             TRACE_EVENT0("blink_rendering", "CompositingPropertyUpdater::updateAncestorDependentProperties");
-            CompositingPropertyUpdater(updateRoot).updateAncestorDependentProperties(updateRoot, compositingPropertyUpdateType, 0);
+            CompositingPropertyUpdater(updateRoot).updateAncestorDependentProperties(updateRoot, compositingPropertyUpdateType);
 #if ASSERT_ENABLED
             CompositingPropertyUpdater::assertNeedsToUpdateAncestorDependantPropertiesBitsCleared(updateRoot);
 #endif
@@ -409,8 +399,7 @@ void RenderLayerCompositor::updateIfNeeded()
 
         {
             TRACE_EVENT0("blink_rendering", "RenderLayerCompositor::updateAfterCompositingChange");
-            const FrameView::ScrollableAreaSet* scrollableAreas = m_renderView.frameView()->scrollableAreas();
-            if (scrollableAreas) {
+            if (const FrameView::ScrollableAreaSet* scrollableAreas = m_renderView.frameView()->scrollableAreas()) {
                 for (FrameView::ScrollableAreaSet::iterator it = scrollableAreas->begin(); it != scrollableAreas->end(); ++it)
                     (*it)->updateAfterCompositingChange();
             }
@@ -468,16 +457,6 @@ void RenderLayerCompositor::updateIfNeeded()
         InspectorInstrumentation::layerTreeDidChange(m_renderView.frame());
 }
 
-void RenderLayerCompositor::addOutOfFlowPositionedLayer(RenderLayer* layer)
-{
-    m_outOfFlowPositionedLayers.add(layer);
-}
-
-void RenderLayerCompositor::removeOutOfFlowPositionedLayer(RenderLayer* layer)
-{
-    m_outOfFlowPositionedLayers.remove(layer);
-}
-
 bool RenderLayerCompositor::allocateOrClearCompositedLayerMapping(RenderLayer* layer, const CompositingStateTransitionType compositedLayerUpdate)
 {
     bool compositedLayerMappingChanged = false;
@@ -489,13 +468,7 @@ bool RenderLayerCompositor::allocateOrClearCompositedLayerMapping(RenderLayer* l
     switch (compositedLayerUpdate) {
     case AllocateOwnCompositedLayerMapping:
         ASSERT(!layer->hasCompositedLayerMapping());
-        {
-            // FIXME: This can go away once we get rid of the forceCompositingMode setting.
-            // It's needed because setCompositingModeEnabled call ensureRootLayer, which
-            // eventually calls WebViewImpl::enterForceCompositingMode.
-            DeprecatedDirtyCompositingDuringCompositingUpdate marker(lifecycle());
-            setCompositingModeEnabled(true);
-        }
+        setCompositingModeEnabled(true);
 
         // If this layer was previously squashed, we need to remove its reference to a groupedMapping right away, so
         // that computing repaint rects will know the layer's correct compositingState.
@@ -581,8 +554,7 @@ bool RenderLayerCompositor::allocateOrClearCompositedLayerMapping(RenderLayer* l
 bool RenderLayerCompositor::updateLayerIfViewportConstrained(RenderLayer* layer)
 {
     RenderLayer::ViewportConstrainedNotCompositedReason viewportConstrainedNotCompositedReason = RenderLayer::NoNotCompositedReason;
-    m_compositingReasonFinder.requiresCompositingForPosition(layer->renderer(), layer, &viewportConstrainedNotCompositedReason, &m_needsToRecomputeCompositingRequirements);
-    ASSERT(!m_needsToRecomputeCompositingRequirements || lifecycle().state() < DocumentLifecycle::InCompositingUpdate);
+    m_compositingReasonFinder.requiresCompositingForPosition(layer->renderer(), layer, &viewportConstrainedNotCompositedReason);
 
     if (layer->viewportConstrainedNotCompositedReason() != viewportConstrainedNotCompositedReason) {
         ASSERT(viewportConstrainedNotCompositedReason == RenderLayer::NoNotCompositedReason || layer->renderer()->style()->position() == FixedPosition);
@@ -605,10 +577,8 @@ void RenderLayerCompositor::updateLayerCompositingState(RenderLayer* layer, Upda
     updateDirectCompositingReasons(layer);
     CompositingStateTransitionType compositedLayerUpdate = CompositingLayerAssigner(this).computeCompositedLayerUpdate(layer);
 
-    if (compositedLayerUpdate != NoCompositingStateChange) {
+    if (compositedLayerUpdate != NoCompositingStateChange)
         setCompositingLayersNeedRebuild();
-        setNeedsToRecomputeCompositingRequirements();
-    }
 
     if (options == UseChickenEggHacks)
         applyUpdateLayerCompositingStateChickenEggHacks(layer, compositedLayerUpdate);
@@ -766,7 +736,7 @@ String RenderLayerCompositor::layerTreeAsText(LayerTreeFlags flags)
     // The true root layer is not included in the dump, so if we want to report
     // its repaint rects, they must be included here.
     if (flags & LayerTreeIncludesRepaintRects)
-        return m_renderView.frameView()->trackedRepaintRectsAsText() + layerTreeText;
+        return m_renderView.frameView()->trackedPaintInvalidationRectsAsText() + layerTreeText;
 
     return layerTreeText;
 }
@@ -908,8 +878,16 @@ void RenderLayerCompositor::updateStyleDeterminedCompositingReasons(RenderLayer*
 
 void RenderLayerCompositor::updateDirectCompositingReasons(RenderLayer* layer)
 {
-    CompositingReasons reasons = m_compositingReasonFinder.directReasons(layer, &m_needsToRecomputeCompositingRequirements);
+    CompositingReasons reasons = m_compositingReasonFinder.directReasons(layer);
     layer->setCompositingReasons(reasons, CompositingReasonComboAllDirectReasons);
+}
+
+void RenderLayerCompositor::setOverlayLayer(GraphicsLayer* layer)
+{
+    ASSERT(rootGraphicsLayer());
+
+    if (layer->parent() != m_overflowControlsHostLayer.get())
+        m_overflowControlsHostLayer->addChild(layer);
 }
 
 bool RenderLayerCompositor::canBeComposited(const RenderLayer* layer) const
@@ -1291,10 +1269,9 @@ void RenderLayerCompositor::attachRootLayer(RootLayerAttachment attachment)
         case RootLayerAttachedViaEnclosingFrame: {
             HTMLFrameOwnerElement* ownerElement = m_renderView.document().ownerElement();
             ASSERT(ownerElement);
-            DeprecatedScheduleStyleRecalcDuringCompositingUpdate marker(ownerElement->document().lifecycle());
             // The layer will get hooked up via CompositedLayerMapping::updateGraphicsLayerConfiguration()
             // for the frame's renderer in the parent document.
-            ownerElement->scheduleLayerUpdate();
+            ownerElement->setNeedsCompositingUpdate();
             break;
         }
     }
@@ -1316,10 +1293,8 @@ void RenderLayerCompositor::detachRootLayer()
         else
             m_rootContentLayer->removeFromParent();
 
-        if (HTMLFrameOwnerElement* ownerElement = m_renderView.document().ownerElement()) {
-            DeprecatedScheduleStyleRecalcDuringCompositingUpdate marker(ownerElement->document().lifecycle());
-            ownerElement->scheduleLayerUpdate();
-        }
+        if (HTMLFrameOwnerElement* ownerElement = m_renderView.document().ownerElement())
+            ownerElement->setNeedsCompositingUpdate();
         break;
     }
     case RootLayerAttachedViaChromeClient: {
@@ -1340,33 +1315,6 @@ void RenderLayerCompositor::detachRootLayer()
 void RenderLayerCompositor::updateRootLayerAttachment()
 {
     ensureRootLayer();
-}
-
-// IFrames are special, because we hook compositing layers together across iframe boundaries
-// when both parent and iframe content are composited. So when this frame becomes composited, we have
-// to use a synthetic style change to get the iframes into RenderLayers in order to allow them to composite.
-void RenderLayerCompositor::notifyIFramesOfCompositingChange()
-{
-    if (!m_renderView.frameView())
-        return;
-    LocalFrame& frame = m_renderView.frameView()->frame();
-
-    for (LocalFrame* child = frame.tree().firstChild(); child; child = child->tree().traverseNext(&frame)) {
-        if (!child->document())
-            continue; // FIXME: Can this happen?
-        if (HTMLFrameOwnerElement* ownerElement = child->document()->ownerElement()) {
-            DeprecatedScheduleStyleRecalcDuringCompositingUpdate marker(ownerElement->document().lifecycle());
-            ownerElement->scheduleLayerUpdate();
-        }
-    }
-
-    // Compositing also affects the answer to RenderIFrame::requiresAcceleratedCompositing(), so
-    // we need to schedule a style recalc in our parent document.
-    if (HTMLFrameOwnerElement* ownerElement = m_renderView.document().ownerElement()) {
-        ownerElement->document().renderView()->compositor()->setNeedsToRecomputeCompositingRequirements();
-        DeprecatedScheduleStyleRecalcDuringCompositingUpdate marker(ownerElement->document().lifecycle());
-        ownerElement->scheduleLayerUpdate();
-    }
 }
 
 ScrollingCoordinator* RenderLayerCompositor::scrollingCoordinator() const

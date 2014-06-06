@@ -4,11 +4,11 @@
 
 {
   'includes': [
-    '../bindings.gypi',  # FIXME: factor out bindings_modules http://crbug.com/358074
+    '../bindings.gypi',
     'v8/generated.gypi',
   ],
 
   'variables': {
-    'bindings_modules_output_dir': '<(bindings_output_dir)/modules',
+    'bindings_modules_output_dir': '<(SHARED_INTERMEDIATE_DIR)/blink/bindings/modules',
   },
 }

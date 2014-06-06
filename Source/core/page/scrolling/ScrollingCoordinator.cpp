@@ -31,7 +31,6 @@
 #include "core/dom/Document.h"
 #include "core/dom/FullscreenElementStack.h"
 #include "core/dom/Node.h"
-#include "core/dom/WheelController.h"
 #include "core/frame/EventHandlerRegistry.h"
 #include "core/frame/FrameView.h"
 #include "core/frame/LocalFrame.h"
@@ -159,17 +158,20 @@ void ScrollingCoordinator::updateAfterCompositingChange()
     if (WebLayer* scrollingWebLayer = frameView ? toWebLayer(frameView->layerForScrolling()) : 0) {
         scrollingWebLayer->setBounds(frameView->contentsSize());
         // If there is a fullscreen element, set the scroll clip layer to 0 so main frame won't scroll.
-        Element* fullscreenElement = FullscreenElementStack::fullscreenElementFrom(*(m_page->mainFrame()->document()));
-        if (fullscreenElement)
+        Document* mainFrameDocument = m_page->mainFrame()->document();
+        Element* fullscreenElement = FullscreenElementStack::fullscreenElementFrom(*mainFrameDocument);
+        if (fullscreenElement && fullscreenElement != mainFrameDocument->documentElement())
             scrollingWebLayer->setScrollClipLayer(0);
         else
             scrollingWebLayer->setScrollClipLayer(toWebLayer(frameView->layerForContainer()));
     }
 
     const FrameTree& tree = m_page->mainFrame()->tree();
-    for (const LocalFrame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
-        if (WebLayer* scrollLayer = toWebLayer(child->view()->layerForScrolling()))
-            scrollLayer->setBounds(child->view()->contentsSize());
+    for (const Frame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
+        if (!child->isLocalFrame())
+            continue;
+        if (WebLayer* scrollLayer = toWebLayer(toLocalFrame(child)->view()->layerForScrolling()))
+            scrollLayer->setBounds(toLocalFrame(child)->view()->contentsSize());
     }
 }
 
@@ -391,16 +393,18 @@ static void makeLayerChildFrameMap(const LocalFrame* currentFrame, LayerFrameMap
 {
     map->clear();
     const FrameTree& tree = currentFrame->tree();
-    for (const LocalFrame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
-        const RenderObject* ownerRenderer = child->ownerRenderer();
+    for (const Frame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
+        if (!child->isLocalFrame())
+            continue;
+        const RenderObject* ownerRenderer = toLocalFrame(child)->ownerRenderer();
         if (!ownerRenderer)
             continue;
         const RenderLayer* containingLayer = ownerRenderer->enclosingLayer();
         LayerFrameMap::iterator iter = map->find(containingLayer);
         if (iter == map->end())
-            map->add(containingLayer, Vector<const LocalFrame*>()).storedValue->value.append(child);
+            map->add(containingLayer, Vector<const LocalFrame*>()).storedValue->value.append(toLocalFrame(child));
         else
-            iter->value.append(child);
+            iter->value.append(toLocalFrame(child));
     }
 }
 
@@ -663,13 +667,8 @@ void ScrollingCoordinator::updateHaveWheelEventHandlers()
         return;
 
     if (WebLayer* scrollLayer = toWebLayer(m_page->mainFrame()->view()->layerForScrolling())) {
-        unsigned wheelEventHandlerCount = 0;
-
-        for (LocalFrame* frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-            wheelEventHandlerCount += WheelController::from(*frame->document())->wheelEventHandlerCount();
-        }
-
-        scrollLayer->setHaveWheelEventHandlers(wheelEventHandlerCount);
+        bool haveHandlers = m_page->frameHost().eventHandlerRegistry().hasEventHandlers(EventHandlerRegistry::WheelEvent);
+        scrollLayer->setHaveWheelEventHandlers(haveHandlers);
     }
 }
 
@@ -771,8 +770,10 @@ Region ScrollingCoordinator::computeShouldHandleScrollGestureOnMainThreadRegion(
     }
 
     const FrameTree& tree = frame->tree();
-    for (LocalFrame* subFrame = tree.firstChild(); subFrame; subFrame = subFrame->tree().nextSibling())
-        shouldHandleScrollGestureOnMainThreadRegion.unite(computeShouldHandleScrollGestureOnMainThreadRegion(subFrame, offset));
+    for (Frame* subFrame = tree.firstChild(); subFrame; subFrame = subFrame->tree().nextSibling()) {
+        if (subFrame->isLocalFrame())
+            shouldHandleScrollGestureOnMainThreadRegion.unite(computeShouldHandleScrollGestureOnMainThreadRegion(toLocalFrame(subFrame), offset));
+    }
 
     return shouldHandleScrollGestureOnMainThreadRegion;
 }

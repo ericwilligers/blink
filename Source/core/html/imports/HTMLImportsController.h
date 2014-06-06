@@ -48,8 +48,9 @@ class ResourceFetcher;
 class HTMLImportChild;
 class HTMLImportChildClient;
 class HTMLImportLoader;
+class HTMLImportTreeRoot;
 
-class HTMLImportsController FINAL : public NoBaseWillBeGarbageCollectedFinalized<HTMLImportsController>, public HTMLImport, public DocumentSupplement {
+class HTMLImportsController FINAL : public NoBaseWillBeGarbageCollectedFinalized<HTMLImportsController>, public DocumentSupplement {
     WILL_BE_USING_GARBAGE_COLLECTED_MIXIN(HTMLImportsController);
     WTF_MAKE_FAST_ALLOCATED_WILL_BE_REMOVED;
 public:
@@ -58,51 +59,35 @@ public:
     explicit HTMLImportsController(Document&);
     virtual ~HTMLImportsController();
 
-    bool isMaster(const Document& document) const { return m_master == &document; }
+    HTMLImportTreeRoot* root() const { return m_root.get(); }
+
     bool shouldBlockScriptExecution(const Document&) const;
+#if !ENABLE(OILPAN)
     void wasDetachedFrom(const Document&);
-
-    // HTMLImport
-    virtual Document* document() const OVERRIDE;
-    virtual bool isDone() const OVERRIDE;
-    virtual void stateWillChange() OVERRIDE;
-    virtual void stateDidChange() OVERRIDE;
-
+#endif
     HTMLImportChild* load(HTMLImport* parent, HTMLImportChildClient*, FetchRequest);
-    void showSecurityErrorMessage(const String&);
 
-    SecurityOrigin* securityOrigin() const;
-    ResourceFetcher* fetcher() const;
-    LocalFrame* frame() const;
-    Document* master() const { return m_master; }
-
-    void recalcTimerFired(Timer<HTMLImportsController>*);
+    Document* master() const;
 
     HTMLImportLoader* createLoader();
 
     size_t loaderCount() const { return m_loaders.size(); }
     HTMLImportLoader* loaderAt(size_t i) const { return m_loaders[i].get(); }
+    Document* loaderDocumentAt(size_t) const;
     HTMLImportLoader* loaderFor(const Document&) const;
 
-    void scheduleRecalcState();
-    HTMLImportChild* findLinkFor(const KURL&) const;
+    virtual void trace(Visitor*);
 
 private:
     HTMLImportChild* createChild(const KURL&, HTMLImportLoader*, HTMLImport* parent, HTMLImportChildClient*);
+#if !ENABLE(OILPAN)
     void clear();
+#endif
 
-    Document* m_master;
-    Timer<HTMLImportsController> m_recalcTimer;
-
-    // List of import which has been loaded or being loaded.
-    typedef Vector<OwnPtr<HTMLImportChild> > ImportList;
-    ImportList m_imports;
-
-    typedef Vector<OwnPtr<HTMLImportLoader> > LoaderList;
+    OwnPtrWillBeMember<HTMLImportTreeRoot> m_root;
+    typedef WillBeHeapVector<OwnPtrWillBeMember<HTMLImportLoader> > LoaderList;
     LoaderList m_loaders;
 };
-
-DEFINE_TYPE_CASTS(HTMLImportsController, HTMLImport, import, import->isRoot(), import.isRoot());
 
 } // namespace WebCore
 

@@ -27,7 +27,6 @@
 #include "config.h"
 #include "Internals.h"
 
-#include <v8.h>
 #include "InternalProfilers.h"
 #include "InternalRuntimeFlags.h"
 #include "InternalSettings.h"
@@ -64,7 +63,6 @@
 #include "core/dom/StaticNodeList.h"
 #include "core/dom/TreeScope.h"
 #include "core/dom/ViewportDescription.h"
-#include "core/dom/WheelController.h"
 #include "core/dom/shadow/ComposedTreeWalker.h"
 #include "core/dom/shadow/ElementShadow.h"
 #include "core/dom/shadow/SelectRuleFeatureSet.h"
@@ -138,6 +136,7 @@
 #include "wtf/PassOwnPtr.h"
 #include "wtf/dtoa.h"
 #include "wtf/text/StringBuffer.h"
+#include <v8.h>
 
 namespace WebCore {
 
@@ -1269,7 +1268,7 @@ unsigned Internals::wheelEventHandlerCount(Document* document, ExceptionState& e
         return 0;
     }
 
-    return WheelController::from(*document)->wheelEventHandlerCount();
+    return eventHandlerCount(*document, EventHandlerRegistry::WheelEvent);
 }
 
 unsigned Internals::scrollEventHandlerCount(Document* document, ExceptionState& exceptionState)
@@ -1477,7 +1476,7 @@ PassRefPtrWillBeRawPtr<NodeList> Internals::nodesFromRect(Document* document, in
     if (!request.ignoreClipping() && !frameView->visibleContentRect().intersects(HitTestLocation::rectForPoint(point, topPadding, rightPadding, bottomPadding, leftPadding)))
         return nullptr;
 
-    Vector<RefPtr<Node> > matches;
+    WillBeHeapVector<RefPtrWillBeMember<Node> > matches;
 
     // Need padding to trigger a rect based hit test, but we want to return a NodeList
     // so we special case this.
@@ -1690,7 +1689,13 @@ bool Internals::isUnclippedDescendant(Element* element, ExceptionState& exceptio
         return 0;
     }
 
-    return layer->isUnclippedDescendant();
+    // We used to compute isUnclippedDescendant only when acceleratedCompositingForOverflowScrollEnabled,
+    // but now we compute it all the time.
+    // FIXME: Remove this if statement and rebaseline the tests that make this assumption.
+    if (!layer->compositor()->acceleratedCompositingForOverflowScrollEnabled())
+        return false;
+
+    return layer->ancestorDependentProperties().isUnclippedDescendant;
 }
 
 String Internals::layerTreeAsText(Document* document, unsigned flags, ExceptionState& exceptionState) const
@@ -1997,7 +2002,7 @@ void Internals::startTrackingRepaints(Document* document, ExceptionState& except
 
     FrameView* frameView = document->view();
     frameView->updateLayoutAndStyleForPainting();
-    frameView->setTracksRepaints(true);
+    frameView->setTracksPaintInvalidations(true);
 }
 
 void Internals::stopTrackingRepaints(Document* document, ExceptionState& exceptionState)
@@ -2009,7 +2014,7 @@ void Internals::stopTrackingRepaints(Document* document, ExceptionState& excepti
 
     FrameView* frameView = document->view();
     frameView->updateLayoutAndStyleForPainting();
-    frameView->setTracksRepaints(false);
+    frameView->setTracksPaintInvalidations(false);
 }
 
 void Internals::updateLayoutIgnorePendingStylesheetsAndRunPostLayoutTasks(ExceptionState& exceptionState)
@@ -2214,7 +2219,7 @@ bool Internals::isSelectPopupVisible(Node* node)
     HTMLSelectElement& select = toHTMLSelectElement(*node);
 
     RenderObject* renderer = select.renderer();
-    if (!renderer->isMenuList())
+    if (!renderer || !renderer->isMenuList())
         return false;
 
     RenderMenuList* menuList = toRenderMenuList(renderer);

@@ -665,7 +665,7 @@ void SVGUseElement::expandUseElementsInShadowTree(Node* element)
         if (subtreeContainsDisallowedElement(cloneParent.get()))
             removeDisallowedElementsFromSubtree(*cloneParent);
 
-        RefPtr<Node> replacingElement(cloneParent.get());
+        RefPtrWillBeRawPtr<Node> replacingElement(cloneParent.get());
 
         // Replace <use> with referenced content.
         ASSERT(use->parentNode());
@@ -674,11 +674,11 @@ void SVGUseElement::expandUseElementsInShadowTree(Node* element)
         // Expand the siblings because the *element* is replaced and we will
         // lose the sibling chain when we are back from recursion.
         element = replacingElement.get();
-        for (RefPtr<Node> sibling = element->nextSibling(); sibling; sibling = sibling->nextSibling())
+        for (RefPtrWillBeRawPtr<Node> sibling = element->nextSibling(); sibling; sibling = sibling->nextSibling())
             expandUseElementsInShadowTree(sibling.get());
     }
 
-    for (RefPtr<Node> child = element->firstChild(); child; child = child->nextSibling())
+    for (RefPtrWillBeRawPtr<Node> child = element->firstChild(); child; child = child->nextSibling())
         expandUseElementsInShadowTree(child.get());
 }
 
@@ -699,10 +699,8 @@ void SVGUseElement::expandSymbolElementsInShadowTree(Node* element)
         svgElement->cloneDataFromElement(*toElement(element));
 
         // Only clone symbol children, and add them to the new <svg> element
-        for (Node* child = element->firstChild(); child; child = child->nextSibling()) {
-            RefPtr<Node> newChild = child->cloneNode(true);
-            svgElement->appendChild(newChild.release());
-        }
+        for (Node* child = element->firstChild(); child; child = child->nextSibling())
+            svgElement->appendChild(child->cloneNode(true));
 
         // We don't walk the target tree element-by-element, and clone each element,
         // but instead use cloneNode(deep=true). This is an optimization for the common
@@ -712,7 +710,7 @@ void SVGUseElement::expandSymbolElementsInShadowTree(Node* element)
         if (subtreeContainsDisallowedElement(svgElement.get()))
             removeDisallowedElementsFromSubtree(*svgElement);
 
-        RefPtr<Node> replacingElement(svgElement.get());
+        RefPtrWillBeRawPtr<Node> replacingElement(svgElement.get());
 
         // Replace <symbol> with <svg>.
         element->parentNode()->replaceChild(svgElement.release(), element);
@@ -720,11 +718,11 @@ void SVGUseElement::expandSymbolElementsInShadowTree(Node* element)
         // Expand the siblings because the *element* is replaced and we will
         // lose the sibling chain when we are back from recursion.
         element = replacingElement.get();
-        for (RefPtr<Node> sibling = element->nextSibling(); sibling; sibling = sibling->nextSibling())
+        for (RefPtrWillBeRawPtr<Node> sibling = element->nextSibling(); sibling; sibling = sibling->nextSibling())
             expandSymbolElementsInShadowTree(sibling.get());
     }
 
-    for (RefPtr<Node> child = element->firstChild(); child; child = child->nextSibling())
+    for (RefPtrWillBeRawPtr<Node> child = element->firstChild(); child; child = child->nextSibling())
         expandSymbolElementsInShadowTree(child.get());
 }
 
@@ -772,37 +770,6 @@ void SVGUseElement::associateInstancesWithShadowTreeElements(Node* target, SVGEl
         associateInstancesWithShadowTreeElements(child, instance);
         child = Traversal<SVGElement>::nextSibling(*child);
     }
-}
-
-SVGElementInstance* SVGUseElement::instanceForShadowTreeElement(Node* element) const
-{
-    if (!m_targetElementInstance) {
-        ASSERT(!inDocument());
-        return 0;
-    }
-
-    return instanceForShadowTreeElement(element, m_targetElementInstance.get());
-}
-
-SVGElementInstance* SVGUseElement::instanceForShadowTreeElement(Node* element, SVGElementInstance* instance) const
-{
-    ASSERT(element);
-    ASSERT(instance);
-
-    // We're dispatching a mutation event during shadow tree construction
-    // this instance hasn't yet been associated to a shadowTree element.
-    if (!instance->shadowTreeElement())
-        return 0;
-
-    if (element == instance->shadowTreeElement())
-        return instance;
-
-    for (SVGElementInstance* current = instance->firstChild(); current; current = current->nextSibling()) {
-        if (SVGElementInstance* search = instanceForShadowTreeElement(element, current))
-            return search;
-    }
-
-    return 0;
 }
 
 void SVGUseElement::invalidateShadowTree()

@@ -33,7 +33,6 @@
 #include "RuntimeEnabledFeatures.h"
 #include "bindings/v8/ScriptController.h"
 #include "core/dom/DocumentType.h"
-#include "core/dom/WheelController.h"
 #include "core/editing/Editor.h"
 #include "core/editing/FrameSelection.h"
 #include "core/editing/InputMethodController.h"
@@ -43,6 +42,7 @@
 #include "core/events/Event.h"
 #include "core/fetch/ResourceFetcher.h"
 #include "core/frame/DOMWindow.h"
+#include "core/frame/EventHandlerRegistry.h"
 #include "core/frame/FrameConsole.h"
 #include "core/frame/FrameHost.h"
 #include "core/frame/FrameView.h"
@@ -88,15 +88,15 @@ static inline float parentTextZoomFactor(LocalFrame* frame)
     return parent->textZoomFactor();
 }
 
-inline LocalFrame::LocalFrame(FrameLoaderClient* client, FrameHost* host, HTMLFrameOwnerElement* ownerElement)
-    : Frame(client, host, ownerElement)
+inline LocalFrame::LocalFrame(FrameLoaderClient* client, FrameHost* host, FrameOwner* owner)
+    : Frame(client, host, owner)
     , m_loader(this)
     , m_navigationScheduler(this)
     , m_script(adoptPtr(new ScriptController(this)))
     , m_editor(Editor::create(*this))
     , m_spellChecker(SpellChecker::create(*this))
-    , m_selection(adoptPtr(new FrameSelection(this)))
-    , m_eventHandler(adoptPtr(new EventHandler(this)))
+    , m_selection(FrameSelection::create(this))
+    , m_eventHandler(adoptPtrWillBeNoop(new EventHandler(this)))
     , m_console(FrameConsole::create(*this))
     , m_inputMethodController(InputMethodController::create(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
@@ -105,10 +105,11 @@ inline LocalFrame::LocalFrame(FrameLoaderClient* client, FrameHost* host, HTMLFr
 {
 }
 
-PassRefPtr<LocalFrame> LocalFrame::create(FrameLoaderClient* client, FrameHost* host, HTMLFrameOwnerElement* ownerElement)
+PassRefPtr<LocalFrame> LocalFrame::create(FrameLoaderClient* client, FrameHost* host, FrameOwner* owner)
 {
-    RefPtr<LocalFrame> frame = adoptRef(new LocalFrame(client, host, ownerElement));
-    if (!frame->ownerElement())
+    RefPtr<LocalFrame> frame = adoptRef(new LocalFrame(client, host, owner));
+    // FIXME: Why is this here? RemoteFrames need this too.
+    if (!frame->owner())
         frame->page()->setMainFrame(frame);
     InspectorInstrumentation::frameAttachedToParent(frame.get());
     return frame.release();
@@ -127,6 +128,7 @@ bool LocalFrame::inScope(TreeScope* scope) const
     Document* doc = document();
     if (!doc)
         return false;
+    // FIXME: This check is broken in for OOPI.
     HTMLFrameOwnerElement* owner = doc->ownerElement();
     if (!owner)
         return false;
@@ -164,6 +166,9 @@ void LocalFrame::setView(PassRefPtr<FrameView> view)
 void LocalFrame::sendOrientationChangeEvent()
 {
     if (!RuntimeEnabledFeatures::orientationEventEnabled() && !RuntimeEnabledFeatures::screenOrientationEnabled())
+        return;
+
+    if (page()->visibilityState() != PageVisibilityStateVisible)
         return;
 
     DOMWindow* window = domWindow();
@@ -379,19 +384,19 @@ void LocalFrame::createView(const IntSize& viewportSize, const Color& background
 
     setView(frameView);
 
-    if (backgroundColor.alpha())
-        frameView->updateBackgroundRecursively(backgroundColor, transparent);
+    frameView->updateBackgroundRecursively(backgroundColor, transparent);
 
     if (isMainFrame)
         frameView->setParentVisible(true);
 
+    // FIXME: Not clear what the right thing for OOPI is here.
     if (ownerRenderer()) {
-        HTMLFrameOwnerElement* owner = ownerElement();
+        HTMLFrameOwnerElement* owner = deprecatedLocalOwner();
         ASSERT(owner);
         owner->setWidget(frameView);
     }
 
-    if (HTMLFrameOwnerElement* owner = ownerElement())
+    if (HTMLFrameOwnerElement* owner = deprecatedLocalOwner())
         view()->setCanHaveScrollbars(owner->scrollingMode() != ScrollbarAlwaysOff);
 }
 
@@ -446,7 +451,7 @@ String LocalFrame::trackedRepaintRectsAsText() const
 {
     if (!m_view)
         return String();
-    return m_view->trackedRepaintRectsAsText();
+    return m_view->trackedPaintInvalidationRectsAsText();
 }
 
 void LocalFrame::setPageZoomFactor(float factor)
@@ -507,13 +512,15 @@ void LocalFrame::deviceOrPageScaleFactorChanged()
 
 void LocalFrame::notifyChromeClientWheelEventHandlerCountChanged() const
 {
+    // FIXME: No-one is using this information, so remove this code.
     // Ensure that this method is being called on the main frame of the page.
     ASSERT(isMainFrame());
 
+    EventHandlerRegistry& registry = m_host->eventHandlerRegistry();
     unsigned count = 0;
-    for (const LocalFrame* frame = this; frame; frame = frame->tree().traverseNext()) {
-        if (frame->document())
-            count += WheelController::from(*frame->document())->wheelEventHandlerCount();
+    if (const EventTargetSet* targets = registry.eventHandlerTargets(EventHandlerRegistry::WheelEvent)) {
+        for (EventTargetSet::const_iterator iter = targets->begin(); iter != targets->end(); ++iter)
+            count += iter->value;
     }
 
     m_host->chrome().client().numWheelEventHandlersChanged(count);
@@ -640,7 +647,7 @@ double LocalFrame::devicePixelRatio() const
 
 void LocalFrame::disconnectOwnerElement()
 {
-    if (ownerElement()) {
+    if (owner()) {
         if (Document* doc = document())
             doc->topDocument().clearAXObjectCache();
     }

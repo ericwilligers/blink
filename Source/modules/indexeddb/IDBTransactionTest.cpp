@@ -38,8 +38,8 @@
 #include "modules/indexeddb/IDBPendingTransactionMonitor.h"
 #include "platform/SharedBuffer.h"
 #include "public/platform/WebIDBDatabase.h"
-
 #include <gtest/gtest.h>
+#include <v8.h>
 
 using namespace WebCore;
 
@@ -50,17 +50,24 @@ namespace {
 class IDBTransactionTest : public testing::Test {
 public:
     IDBTransactionTest()
-        : m_scope(V8TestingScope::create(v8::Isolate::GetCurrent()))
+        : m_scope(v8::Isolate::GetCurrent())
+        , m_executionContext(Document::create())
     {
-        m_scope->scriptState()->setExecutionContext(Document::create());
+        m_scope.scriptState()->setExecutionContext(m_executionContext.get());
     }
 
-    v8::Isolate* isolate() const { return m_scope->isolate(); }
-    ScriptState* scriptState() const { return m_scope->scriptState(); }
-    ExecutionContext* executionContext() { return m_scope->scriptState()->executionContext(); }
+    ~IDBTransactionTest()
+    {
+        m_scope.scriptState()->setExecutionContext(0);
+    }
+
+    v8::Isolate* isolate() const { return m_scope.isolate(); }
+    ScriptState* scriptState() const { return m_scope.scriptState(); }
+    ExecutionContext* executionContext() { return m_scope.scriptState()->executionContext(); }
 
 private:
-    OwnPtr<V8TestingScope> m_scope;
+    V8TestingScope m_scope;
+    RefPtr<ExecutionContext> m_executionContext;
 };
 
 class FakeWebIDBDatabase FINAL : public blink::WebIDBDatabase {

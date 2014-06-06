@@ -106,7 +106,12 @@ size_t osPageSize()
 
 class MemoryRegion {
 public:
-    MemoryRegion(Address base, size_t size) : m_base(base), m_size(size) { ASSERT(size > 0); }
+    MemoryRegion(Address base, size_t size)
+        : m_base(base)
+        , m_size(size)
+    {
+        ASSERT(size > 0);
+    }
 
     bool contains(Address addr) const
     {
@@ -160,6 +165,7 @@ public:
     }
 
     Address base() const { return m_base; }
+    size_t size() const { return m_size; }
 
 private:
     Address m_base;
@@ -179,7 +185,11 @@ private:
 // Guard pages are created before and after the writable memory.
 class PageMemory {
 public:
-    ~PageMemory() { m_reserved.release(); }
+    ~PageMemory()
+    {
+        __lsan_unregister_root_region(m_writable.base(), m_writable.size());
+        m_reserved.release();
+    }
 
     bool commit() WARN_UNUSED_RETURN { return m_writable.commit(); }
     void decommit() { m_writable.decommit(); }
@@ -280,19 +290,13 @@ private:
         : m_reserved(reserved)
         , m_writable(writable)
     {
-        // This annotation is for letting the LeakSanitizer ignore PageMemory objects.
-        //
-        // - The LeakSanitizer runs before the shutdown sequence and reports unreachable memory blocks.
-        // - The LeakSanitizer only recognizes memory blocks allocated through malloc/new,
-        //   and we need special handling for mapped regions.
-        // - The PageMemory object is only referenced by a HeapPage<Header> object, which is
-        //   located inside the mapped region, which is not released until the shutdown sequence.
-        //
-        // Given the above, we need to explicitly annotate that the LeakSanitizer should ignore
-        // PageMemory objects.
-        WTF_ANNOTATE_LEAKING_OBJECT_PTR(this);
-
         ASSERT(reserved.contains(writable));
+
+        // Register the writable area of the memory as part of the LSan root set.
+        // Only the writable area is mapped and can contain C++ objects. Those
+        // C++ objects can contain pointers to objects outside of the heap and
+        // should therefore be part of the LSan root set.
+        __lsan_register_root_region(m_writable.base(), m_writable.size());
     }
 
     MemoryRegion m_reserved;
@@ -402,7 +406,11 @@ void HeapObjectHeader::finalize(const GCInfo* gcInfo, Address object, size_t obj
     if (gcInfo->hasFinalizer()) {
         gcInfo->m_finalize(object);
     }
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(LEAK_SANITIZER)
+    // Zap freed memory with a recognizable zap value in debug mode.
+    // Also zap when using leak sanitizer because the heap is used as
+    // a root region for lsan and therefore pointers in unreachable
+    // memory could hide leaks.
     for (size_t i = 0; i < objectSize; i++)
         object[i] = finalizedZapValue;
 #endif
@@ -818,20 +826,28 @@ void ThreadHeap<Header>::assertEmpty()
             BasicObjectHeader* basicHeader = reinterpret_cast<BasicObjectHeader*>(headerAddress);
             ASSERT(basicHeader->size() < blinkPagePayloadSize());
             // A live object is potentially a dangling pointer from
-            // some root. Treat that as a critical bug both in release
-            // and debug mode. Unfortunately, we can only check when
-            // nothing has been marked conservatively from the
-            // stack. Something could be conservatively kept alive
-            // because a non-pointer on another thread's stack is
-            // treated as a pointer into the heap.
-            RELEASE_ASSERT(Heap::lastGCWasConservative() || basicHeader->isFree());
+            // some root. Treat that as a bug. Unfortunately, it is
+            // hard to reliably check in the presence of conservative
+            // stack scanning. Something could be conservatively kept
+            // alive because a non-pointer on another thread's stack
+            // is treated as a pointer into the heap.
+            //
+            // FIXME: This assert can currently trigger in cases where
+            // worker shutdown does not get enough precise GCs to get
+            // all objects removed from the worker heap. There are two
+            // issues: 1) conservative GCs keeping objects alive, and
+            // 2) long chains of RefPtrs/Persistents that require more
+            // GCs to get everything cleaned up. Maybe we can keep
+            // threads alive until their heaps become empty instead of
+            // forcing the threads to die immediately?
+            ASSERT(Heap::lastGCWasConservative() || basicHeader->isFree());
             headerAddress += basicHeader->size();
         }
         ASSERT(headerAddress == end);
         addToFreeList(page->payload(), end - page->payload());
     }
 
-    RELEASE_ASSERT(!m_firstLargeHeapObject);
+    ASSERT(Heap::lastGCWasConservative() || !m_firstLargeHeapObject);
 }
 
 template<typename Header>
@@ -1314,6 +1330,7 @@ public:
             return;
         header->mark();
 #if ENABLE(GC_TRACING)
+        MutexLocker locker(objectGraphMutex());
         String className(classOf(objectPointer));
         {
             LiveObjectMap::AddResult result = currentlyLive().add(className, LiveObjectSet());
@@ -1321,7 +1338,7 @@ public:
         }
         ObjectGraph::AddResult result = objectGraph().add(reinterpret_cast<uintptr_t>(objectPointer), std::make_pair(reinterpret_cast<uintptr_t>(m_hostObject), m_hostName));
         ASSERT(result.isNewEntry);
-        // printf("%s[%p] -> %s[%p]\n", m_hostName.ascii().data(), m_hostObject, className.ascii().data(), objectPointer);
+        // fprintf(stderr, "%s[%p] -> %s[%p]\n", m_hostName.ascii().data(), m_hostObject, className.ascii().data(), objectPointer);
 #endif
         if (callback)
             Heap::pushTraceCallback(const_cast<void*>(objectPointer), callback);
@@ -1409,14 +1426,14 @@ public:
 #if ENABLE(GC_TRACING)
     void reportStats()
     {
-        printf("\n---------- AFTER MARKING -------------------\n");
+        fprintf(stderr, "\n---------- AFTER MARKING -------------------\n");
         for (LiveObjectMap::iterator it = currentlyLive().begin(), end = currentlyLive().end(); it != end; ++it) {
-            printf("%s %u", it->key.ascii().data(), it->value.size());
+            fprintf(stderr, "%s %u", it->key.ascii().data(), it->value.size());
 
             if (it->key == "WebCore::Document")
                 reportStillAlive(it->value, previouslyLive().get(it->key));
 
-            printf("\n");
+            fprintf(stderr, "\n");
         }
 
         previouslyLive().swap(currentlyLive());
@@ -1431,7 +1448,7 @@ public:
     {
         int count = 0;
 
-        printf(" [previously %u]", previous.size());
+        fprintf(stderr, " [previously %u]", previous.size());
         for (LiveObjectSet::iterator it = current.begin(), end = current.end(); it != end; ++it) {
             if (previous.find(*it) == previous.end())
                 continue;
@@ -1441,32 +1458,38 @@ public:
         if (!count)
             return;
 
-        printf(" {survived 2GCs %d: ", count);
+        fprintf(stderr, " {survived 2GCs %d: ", count);
         for (LiveObjectSet::iterator it = current.begin(), end = current.end(); it != end; ++it) {
             if (previous.find(*it) == previous.end())
                 continue;
-            printf("%ld", *it);
+            fprintf(stderr, "%ld", *it);
             if (--count)
-                printf(", ");
+                fprintf(stderr, ", ");
         }
         ASSERT(!count);
-        printf("}");
+        fprintf(stderr, "}");
     }
 
     static void dumpPathToObjectFromObjectGraph(const ObjectGraph& graph, uintptr_t target)
     {
-        printf("Path to %lx of %s\n", target, classOf(reinterpret_cast<const void*>(target)).ascii().data());
+        fprintf(stderr, "Path to %lx of %s\n", target, classOf(reinterpret_cast<const void*>(target)).ascii().data());
         ObjectGraph::const_iterator it = graph.find(target);
         while (it != graph.end()) {
-            printf("<- %lx of %s\n", it->value.first, it->value.second.ascii().data());
+            fprintf(stderr, "<- %lx of %s\n", it->value.first, it->value.second.ascii().data());
             it = graph.find(it->value.first);
         }
-        printf("\n");
+        fprintf(stderr, "\n");
     }
 
     static void dumpPathToObjectOnNextGC(void* p)
     {
         objectsToFindPath().add(reinterpret_cast<uintptr_t>(p));
+    }
+
+    static Mutex& objectGraphMutex()
+    {
+        AtomicallyInitializedStatic(Mutex&, mutex = *new Mutex);
+        return mutex;
     }
 
     static LiveObjectMap& previouslyLive()

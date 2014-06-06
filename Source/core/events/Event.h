@@ -112,7 +112,7 @@ public:
     void setType(const AtomicString& type) { m_type = type; }
 
     EventTarget* target() const { return m_target.get(); }
-    void setTarget(PassRefPtr<EventTarget>);
+    void setTarget(PassRefPtrWillBeRawPtr<EventTarget>);
 
     EventTarget* currentTarget() const { return m_currentTarget; }
     void setCurrentTarget(EventTarget* currentTarget) { m_currentTarget = currentTarget; }
@@ -204,7 +204,7 @@ private:
 
     unsigned short m_eventPhase;
     EventTarget* m_currentTarget;
-    RefPtr<EventTarget> m_target;
+    RefPtrWillBeMember<EventTarget> m_target;
     DOMTimeStamp m_createTime;
     RefPtrWillBeMember<Event> m_underlyingEvent;
     OwnPtrWillBeMember<EventPath> m_eventPath;

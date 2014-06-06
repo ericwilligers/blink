@@ -38,17 +38,14 @@
 #include "platform/weborigin/Referrer.h"
 #include "wtf/Forward.h"
 #include "wtf/Vector.h"
-
-namespace v8 {
-class Context;
-template<class T> class Handle;
-}
+#include <v8.h>
 
 namespace blink {
 class WebCookieJar;
 class WebRTCPeerConnectionHandler;
 class WebServiceWorkerProvider;
 class WebServiceWorkerProviderClient;
+class WebSocketHandle;
 class WebApplicationCacheHost;
 class WebApplicationCacheHostClient;
 }
@@ -204,6 +201,7 @@ namespace WebCore {
         virtual void didChangeName(const String&) { }
 
         virtual void dispatchWillOpenSocketStream(SocketStreamHandle*) { }
+        virtual void dispatchWillOpenWebSocket(blink::WebSocketHandle*) { }
 
         virtual void dispatchWillStartUsingPeerConnectionHandler(blink::WebRTCPeerConnectionHandler*) { }
 

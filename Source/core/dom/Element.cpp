@@ -57,6 +57,7 @@
 #include "core/dom/MutationObserverInterestGroup.h"
 #include "core/dom/MutationRecord.h"
 #include "core/dom/NamedNodeMap.h"
+#include "core/dom/NoEventDispatchAssertion.h"
 #include "core/dom/NodeRenderStyle.h"
 #include "core/dom/PresentationAttributeStyle.h"
 #include "core/dom/PseudoElement.h"
@@ -162,6 +163,13 @@ static Attr* findAttrNodeInList(const AttrNodeList& attrNodeList, const Qualifie
 PassRefPtrWillBeRawPtr<Element> Element::create(const QualifiedName& tagName, Document* document)
 {
     return adoptRefWillBeRefCountedGarbageCollected(new Element(tagName, document, CreateElement));
+}
+
+Element::Element(const QualifiedName& tagName, Document* document, ConstructionType type)
+    : ContainerNode(document, type)
+    , m_tagName(tagName)
+{
+    ScriptWrappable::init(this);
 }
 
 Element::~Element()
@@ -1201,7 +1209,7 @@ String Element::nodeName() const
 
 void Element::setPrefix(const AtomicString& prefix, ExceptionState& exceptionState)
 {
-    UseCounter::count(document(), UseCounter::ElementSetPrefix);
+    UseCounter::countDeprecation(document(), UseCounter::ElementSetPrefix);
 
     if (!prefix.isEmpty() && !Document::isValidName(prefix)) {
         exceptionState.throwDOMException(InvalidCharacterError, "The prefix '" + prefix + "' is not a valid name.");
@@ -1233,12 +1241,11 @@ const AtomicString& Element::locateNamespacePrefix(const AtomicString& namespace
         return prefix();
 
     if (hasAttributes()) {
-        unsigned attributeCount = this->attributeCount();
-        for (unsigned i = 0; i < attributeCount; ++i) {
-            const Attribute& attr = attributeItem(i);
-
-            if (attr.prefix() == xmlnsAtom && attr.value() == namespaceToLocate)
-                return attr.localName();
+        AttributeIteratorAccessor attributes = attributesIterator();
+        AttributeConstIterator end = attributes.end();
+        for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
+            if (it->prefix() == xmlnsAtom && it->value() == namespaceToLocate)
+                return it->localName();
         }
     }
 
@@ -1366,6 +1373,9 @@ void Element::removedFrom(ContainerNode* insertionPoint)
     document().removeFromTopLayer(this);
 
     clearElementFlag(IsInCanvasSubtree);
+
+    if (hasRareData())
+        elementRareData()->clearRestyleFlags();
 }
 
 void Element::attach(const AttachContext& context)
@@ -1377,7 +1387,6 @@ void Element::attach(const AttachContext& context)
     if (hasRareData() && styleChangeType() == NeedsReattachStyleChange) {
         ElementRareData* data = elementRareData();
         data->clearComputedStyle();
-        data->clearRestyleFlags();
         // Only clear the style state if we're not going to reuse the style from recalcStyle.
         if (!context.resolvedStyle)
             data->resetStyleState();
@@ -1423,7 +1432,6 @@ void Element::detach(const AttachContext& context)
         if (!document().inStyleRecalc()) {
             data->resetStyleState();
             data->clearComputedStyle();
-            data->clearRestyleFlags();
         }
 
         if (ActiveAnimations* activeAnimations = data->activeAnimations()) {
@@ -1885,16 +1893,31 @@ PassRefPtrWillBeRawPtr<Attr> Element::setAttributeNode(Attr* attrNode, Exception
     UniqueElementData& elementData = ensureUniqueElementData();
 
     size_t index = elementData.getAttributeItemIndex(attrNode->qualifiedName(), shouldIgnoreAttributeCase());
+    AtomicString localName;
     if (index != kNotFound) {
-        if (oldAttrNode)
-            detachAttrNodeFromElementWithValue(oldAttrNode.get(), elementData.attributeItem(index).value());
-        else
-            oldAttrNode = Attr::create(document(), attrNode->qualifiedName(), elementData.attributeItem(index).value());
+        const Attribute& attr = elementData.attributeItem(index);
+
+        // If the name of the ElementData attribute doesn't
+        // (case-sensitively) match that of the Attr node, record it
+        // on the Attr so that it can correctly resolve the value on
+        // the Element.
+        if (!attr.name().matches(attrNode->qualifiedName()))
+            localName = attr.localName();
+
+        if (oldAttrNode) {
+            detachAttrNodeFromElementWithValue(oldAttrNode.get(), attr.value());
+        } else {
+            // FIXME: using attrNode's name rather than the
+            // Attribute's for the replaced Attr is compatible with
+            // all but Gecko (and, arguably, the DOM Level1 spec text.)
+            // Consider switching.
+            oldAttrNode = Attr::create(document(), attrNode->qualifiedName(), attr.value());
+        }
     }
 
     setAttributeInternal(index, attrNode->qualifiedName(), attrNode->value(), NotInSynchronizationOfLazyAttribute);
 
-    attrNode->attachToElement(this);
+    attrNode->attachToElement(this, localName);
     treeScope().adoptIfNeeded(*attrNode);
     ensureAttrNodeListForElement(this).append(attrNode);
 
@@ -2084,7 +2107,7 @@ void Element::focus(bool restorePreviousSelection, FocusType type)
     if (!isFocusable())
         return;
 
-    RefPtr<Node> protect(this);
+    RefPtrWillBeRawPtr<Node> protect(this);
     if (!document().page()->focusController().setFocusedElement(this, document().frame(), type))
         return;
 
@@ -2232,15 +2255,15 @@ void Element::setOuterHTML(const String& html, ExceptionState& exceptionState)
     }
 
     RefPtrWillBeRawPtr<Element> parent = toElement(p);
-    RefPtr<Node> prev = previousSibling();
-    RefPtr<Node> next = nextSibling();
+    RefPtrWillBeRawPtr<Node> prev = previousSibling();
+    RefPtrWillBeRawPtr<Node> next = nextSibling();
 
     RefPtrWillBeRawPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(html, parent.get(), AllowScriptingContent, "outerHTML", exceptionState);
     if (exceptionState.hadException())
         return;
 
     parent->replaceChild(fragment.release(), this, exceptionState);
-    RefPtr<Node> node = next ? next->previousSibling() : 0;
+    RefPtrWillBeRawPtr<Node> node = next ? next->previousSibling() : 0;
     if (!exceptionState.hadException() && node && node->isTextNode())
         mergeWithNextTextNode(node.release(), exceptionState);
 
@@ -2989,11 +3012,11 @@ void Element::detachAllAttrNodesFromElement()
     AttrNodeList* attrNodeList = attrNodeListForElement(this);
     ASSERT(attrNodeList);
 
-    unsigned attributeCount = this->attributeCount();
-    for (unsigned i = 0; i < attributeCount; ++i) {
-        const Attribute& attribute = attributeItem(i);
-        if (RefPtrWillBeRawPtr<Attr> attrNode = findAttrNodeInList(*attrNodeList, attribute.name()))
-            attrNode->detachFromElementWithValue(attribute.value());
+    AttributeIteratorAccessor attributes = attributesIterator();
+    AttributeConstIterator end = attributes.end();
+    for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
+        if (RefPtrWillBeRawPtr<Attr> attrNode = findAttrNodeInList(*attrNodeList, it->name()))
+            attrNode->detachFromElementWithValue(it->value());
     }
 
     removeAttrNodeListForElement(this);
@@ -3057,11 +3080,10 @@ void Element::cloneAttributesFromElement(const Element& other)
     else
         m_elementData = other.m_elementData->makeUniqueCopy();
 
-    unsigned length = m_elementData->length();
-    for (unsigned i = 0; i < length; ++i) {
-        const Attribute& attribute = m_elementData->attributeItem(i);
-        attributeChangedFromParserOrByCloning(attribute.name(), attribute.value(), ModifiedByCloning);
-    }
+    AttributeIteratorAccessor attributes = m_elementData->attributesIterator();
+    AttributeConstIterator end = attributes.end();
+    for (AttributeConstIterator it = attributes.begin(); it != end; ++it)
+        attributeChangedFromParserOrByCloning(it->name(), it->value(), ModifiedByCloning);
 }
 
 void Element::cloneDataFromElement(const Element& other)

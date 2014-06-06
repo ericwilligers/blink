@@ -70,6 +70,7 @@ void HTMLBodyElement::collectStyleForPresentationAttribute(const QualifiedName& 
         if (!url.isEmpty()) {
             RefPtrWillBeRawPtr<CSSImageValue> imageValue = CSSImageValue::create(url, document().completeURL(url));
             imageValue->setInitiator(localName());
+            imageValue->setReferrer(Referrer(document().outgoingReferrer(), document().referrerPolicy()));
             style->setProperty(CSSProperty(CSSPropertyBackgroundImage, imageValue.release()));
         }
     } else if (name == marginwidthAttr || name == leftmarginAttr) {
@@ -148,6 +149,8 @@ void HTMLBodyElement::parseAttribute(const QualifiedName& name, const AtomicStri
         document().setWindowAttributeEventListener(EventTypeNames::online, createAttributeEventListener(document().frame(), name, value));
     else if (name == onofflineAttr)
         document().setWindowAttributeEventListener(EventTypeNames::offline, createAttributeEventListener(document().frame(), name, value));
+    else if (name == onlanguagechangeAttr)
+        document().setWindowAttributeEventListener(EventTypeNames::languagechange, createAttributeEventListener(document().frame(), name, value));
     else
         HTMLElement::parseAttribute(name, value);
 }

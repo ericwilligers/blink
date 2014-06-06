@@ -203,7 +203,7 @@ int HTMLSelectElement::activeSelectionEndListIndex() const
 void HTMLSelectElement::add(HTMLElement* element, HTMLElement* before, ExceptionState& exceptionState)
 {
     // Make sure the element is ref'd and deref'd so we don't leak it.
-    RefPtr<HTMLElement> protectNewChild(element);
+    RefPtrWillBeRawPtr<HTMLElement> protectNewChild(element);
 
     if (!element || !(isHTMLOptionElement(element) || isHTMLOptGroupElement(element) || isHTMLHRElement(element)))
         return;
@@ -381,7 +381,7 @@ PassRefPtrWillBeRawPtr<HTMLCollection> HTMLSelectElement::selectedOptions()
 
 PassRefPtrWillBeRawPtr<HTMLOptionsCollection> HTMLSelectElement::options()
 {
-    return static_cast<HTMLOptionsCollection*>(ensureCachedHTMLCollection(SelectOptions).get());
+    return toHTMLOptionsCollection(ensureCachedHTMLCollection(SelectOptions).get());
 }
 
 void HTMLSelectElement::updateListItemSelectedStates()
@@ -450,7 +450,7 @@ void HTMLSelectElement::setOption(unsigned index, HTMLOptionElement* option, Exc
     if (index > maxSelectItems - 1)
         index = maxSelectItems - 1;
     int diff = index - length();
-    RefPtr<HTMLElement> before = nullptr;
+    RefPtrWillBeRawPtr<HTMLElement> before = nullptr;
     // Out of array bounds? First insert empty dummies.
     if (diff > 0) {
         setLength(index, exceptionState);
@@ -486,7 +486,7 @@ void HTMLSelectElement::setLength(unsigned newLen, ExceptionState& exceptionStat
 
         // Removing children fires mutation events, which might mutate the DOM further, so we first copy out a list
         // of elements that we intend to remove then attempt to remove them one at a time.
-        Vector<RefPtr<Element> > itemsToRemove;
+        WillBeHeapVector<RefPtrWillBeMember<Element> > itemsToRemove;
         size_t optionIndex = 0;
         for (size_t i = 0; i < items.size(); ++i) {
             Element* item = items[i];

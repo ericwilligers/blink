@@ -80,6 +80,9 @@ static const char userAgentOverride[] = "userAgentOverride";
 
 namespace {
 
+// Keep in sync with kDevToolsRequestInitiator defined in devtools_network_controller.cc
+const char kDevToolsRequestInitiator[] = "X-DevTools-Request-Initiator";
+
 static PassRefPtr<JSONObject> buildObjectForHeaders(const HTTPHeaderMap& headers)
 {
     RefPtr<JSONObject> headersObject = JSONObject::create();
@@ -242,7 +245,7 @@ static PassRefPtr<TypeBuilder::Network::Response> buildObjectForResourceResponse
         statusText = response.httpStatusText();
     }
     RefPtr<JSONObject> headers;
-    if (response.resourceLoadInfo())
+    if (response.resourceLoadInfo() && response.resourceLoadInfo()->responseHeaders.size())
         headers = buildObjectForHeaders(response.resourceLoadInfo()->responseHeaders);
     else
         headers = buildObjectForHeaders(response.httpHeaderFields());
@@ -266,8 +269,8 @@ static PassRefPtr<TypeBuilder::Network::Response> buildObjectForResourceResponse
     if (response.resourceLoadInfo()) {
         if (!response.resourceLoadInfo()->responseHeadersText.isEmpty())
             responseObject->setHeadersText(response.resourceLoadInfo()->responseHeadersText);
-
-        responseObject->setRequestHeaders(buildObjectForHeaders(response.resourceLoadInfo()->requestHeaders));
+        if (response.resourceLoadInfo()->requestHeaders.size())
+            responseObject->setRequestHeaders(buildObjectForHeaders(response.resourceLoadInfo()->requestHeaders));
         if (!response.resourceLoadInfo()->requestHeadersText.isEmpty())
             responseObject->setRequestHeadersText(response.resourceLoadInfo()->requestHeadersText);
     }
@@ -312,11 +315,8 @@ void InspectorResourceAgent::willSendRequest(unsigned long identifier, DocumentL
     request.setReportLoadTiming(true);
     request.setReportRawHeaders(true);
 
-    if (m_state->getBoolean(ResourceAgentState::cacheDisabled)) {
-        request.setHTTPHeaderField("Pragma", "no-cache");
-        request.setCachePolicy(ReloadIgnoringCacheData);
-        request.setHTTPHeaderField("Cache-Control", "no-cache");
-    }
+    if (m_state->getBoolean(ResourceAgentState::cacheDisabled))
+        request.setCachePolicy(ReloadBypassingCache);
 
     String frameId = m_pageAgent->frameId(loader->frame());
 
@@ -432,7 +432,7 @@ void InspectorResourceAgent::didFailLoading(unsigned long identifier, const Reso
 {
     String requestId = IdentifiersFactory::requestId(identifier);
     bool canceled = error.isCancellation();
-    m_frontend->loadingFailed(requestId, currentTime(), error.localizedDescription(), canceled ? &canceled : 0);
+    m_frontend->loadingFailed(requestId, currentTime(), InspectorPageAgent::resourceTypeJson(m_resourcesData->resourceType(requestId)), error.localizedDescription(), canceled ? &canceled : 0);
 }
 
 void InspectorResourceAgent::scriptImported(unsigned long identifier, const String& sourceString)
@@ -454,6 +454,7 @@ void InspectorResourceAgent::documentThreadableLoaderStartedLoadingForClient(uns
     if (it == m_pendingXHRReplayData.end())
         return;
 
+    m_resourcesData->setResourceType(IdentifiersFactory::requestId(identifier), InspectorPageAgent::XHRResource);
     XHRReplayData* xhrReplayData = it->value.get();
     String requestId = IdentifiersFactory::requestId(identifier);
     m_resourcesData->setXHRReplayData(requestId, xhrReplayData);
@@ -718,8 +719,10 @@ void InspectorResourceAgent::setCacheDisabled(ErrorString*, bool cacheDisabled)
     m_state->setBoolean(ResourceAgentState::cacheDisabled, cacheDisabled);
     if (cacheDisabled)
         memoryCache()->evictResources();
-    for (LocalFrame* frame = m_pageAgent->mainFrame(); frame; frame = frame->tree().traverseNext())
-        frame->document()->fetcher()->garbageCollectDocumentResources();
+    for (Frame* frame = m_pageAgent->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (frame->isLocalFrame())
+            toLocalFrame(frame)->document()->fetcher()->garbageCollectDocumentResources();
+    }
 }
 
 void InspectorResourceAgent::loadResourceForFrontend(ErrorString* errorString, const String& frameId, const String& url, const RefPtr<JSONObject>* requestHeaders, PassRefPtr<LoadResourceForFrontendCallback> prpCallback)
@@ -749,13 +752,16 @@ void InspectorResourceAgent::loadResourceForFrontend(ErrorString* errorString, c
             request.addHTTPHeaderField(AtomicString(it->key), AtomicString(value));
         }
     }
+    request.addHTTPHeaderField(kDevToolsRequestInitiator, "frontend");
 
     ThreadableLoaderOptions options;
-    options.allowCredentials = AllowStoredCredentials;
     options.crossOriginRequestPolicy = AllowCrossOriginRequests;
 
+    ResourceLoaderOptions resourceLoaderOptions;
+    resourceLoaderOptions.allowCredentials = AllowStoredCredentials;
+
     InspectorThreadableLoaderClient* inspectorThreadableLoaderClient = new InspectorThreadableLoaderClient(callback);
-    RefPtr<DocumentThreadableLoader> loader = DocumentThreadableLoader::create(*document, inspectorThreadableLoaderClient, request, options);
+    RefPtr<DocumentThreadableLoader> loader = DocumentThreadableLoader::create(*document, inspectorThreadableLoaderClient, request, options, resourceLoaderOptions);
     if (!loader) {
         inspectorThreadableLoaderClient->didFailLoaderCreation();
         return;

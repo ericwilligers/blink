@@ -1,4 +1,7 @@
 {
+  'includes': [
+    'platform_generated.gypi',
+  ],
   'variables': {
     'platform_files': [
       'AsyncFileSystemCallbacks.h',
@@ -299,6 +302,8 @@
       'exported/WebScrollbarThemeGeometryNative.cpp',
       'exported/WebScrollbarThemeGeometryNative.h',
       'exported/WebSerializedOrigin.cpp',
+      'exported/WebServiceWorkerProxy.cpp',
+      'exported/WebServiceWorkerRequest.cpp',
       'exported/WebServiceWorkerResponse.cpp',
       'exported/WebSocketHandshakeRequestInfo.cpp',
       'exported/WebSocketHandshakeResponseInfo.cpp',
@@ -901,6 +906,7 @@
       'graphics/filters/ImageFilterBuilderTest.cpp',
       'graphics/gpu/DrawingBufferTest.cpp',
       'graphics/test/MockDiscardablePixelRef.h',
+      'mac/ScrollElasticityControllerTest.mm',
       'image-decoders/ImageDecoderTest.cpp',
       'network/HTTPParsersTest.cpp',
       'testing/ArenaTestHelpers.h',

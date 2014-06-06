@@ -1224,6 +1224,7 @@ class Port(object):
         paths.append(self._filesystem.join(self.layout_tests_dir(), 'NeverFixTests'))
         paths.append(self._filesystem.join(self.layout_tests_dir(), 'StaleTestExpectations'))
         paths.append(self._filesystem.join(self.layout_tests_dir(), 'SlowTests'))
+        paths.append(self._filesystem.join(self.layout_tests_dir(), 'FlakyTests'))
 
         builder_name = self.get_option('builder_name', 'DUMMY_BUILDER_NAME')
         if builder_name == 'DUMMY_BUILDER_NAME' or '(deps)' in builder_name or builder_name in self.try_builder_names:
@@ -1733,14 +1734,6 @@ class Port(object):
                              ['--stable-release-mode',
                               '--force-compositing-mode']),
             VirtualTestSuite('stable',
-                             'http/tests/websocket',
-                             ['--stable-release-mode',
-                              '--force-compositing-mode']),
-            VirtualTestSuite('stable',
-                             'http/tests/security/mixedContent/websocket',
-                             ['--stable-release-mode',
-                              '--force-compositing-mode']),
-            VirtualTestSuite('stable',
                              'web-animations-api/eased-keyframes.html',
                              ['--stable-release-mode',
                               '--force-compositing-mode']),
@@ -1748,14 +1741,10 @@ class Port(object):
                              'platform/linux/fast/text/subpixel',
                              ['--enable-webkit-text-subpixel-positioning',
                               '--force-compositing-mode']),
-            VirtualTestSuite('windows-directwrite',
+            VirtualTestSuite('antialiasedtext',
                              'fast/text',
                              ['--enable-direct-write',
                               '--enable-font-antialiasing',
-                              '--force-compositing-mode']),
-            VirtualTestSuite('mac-antialiasedtext',
-                             'fast/text',
-                             ['--enable-font-antialiasing',
                               '--force-compositing-mode']),
 
         ]

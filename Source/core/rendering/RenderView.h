@@ -75,7 +75,7 @@ public:
 
     FrameView* frameView() const { return m_frameView; }
 
-    virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
+    virtual void mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
     void repaintViewRectangle(const LayoutRect&) const;
 
     void repaintViewAndCompositedLayers();
@@ -124,7 +124,7 @@ public:
 #endif
 
     bool shouldDoFullRepaintForNextLayout() const;
-    bool doingFullRepaint() const { return m_frameView->needsFullRepaint(); }
+    bool doingFullRepaint() const { return m_frameView->needsFullPaintInvalidation(); }
 
     // Subtree push
     void pushLayoutState(RenderObject&);
@@ -208,6 +208,8 @@ private:
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
     virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const OVERRIDE;
     virtual void computeSelfHitTestRects(Vector<LayoutRect>&, const LayoutPoint& layerOffset) const OVERRIDE;
+
+    virtual void invalidateTreeAfterLayout(const RenderLayerModelObject& paintInvalidationContainer) OVERRIDE FINAL;
 
     bool shouldRepaint(const LayoutRect&) const;
 

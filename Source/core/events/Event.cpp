@@ -186,7 +186,7 @@ bool Event::isBeforeUnloadEvent() const
     return false;
 }
 
-void Event::setTarget(PassRefPtr<EventTarget> target)
+void Event::setTarget(PassRefPtrWillBeRawPtr<EventTarget> target)
 {
     if (m_target == target)
         return;
@@ -227,7 +227,7 @@ PassRefPtrWillBeRawPtr<NodeList> Event::path() const
     size_t eventPathSize = m_eventPath->size();
     for (size_t i = 0; i < eventPathSize; ++i) {
         if (node == (*m_eventPath)[i].node()) {
-            return (*m_eventPath)[i].treeScopeEventContext()->ensureEventPath(*m_eventPath);
+            return (*m_eventPath)[i].treeScopeEventContext().ensureEventPath(*m_eventPath);
         }
     }
     return StaticNodeList::createEmpty();
@@ -235,6 +235,7 @@ PassRefPtrWillBeRawPtr<NodeList> Event::path() const
 
 void Event::trace(Visitor* visitor)
 {
+    visitor->trace(m_target);
     visitor->trace(m_underlyingEvent);
     visitor->trace(m_eventPath);
 }

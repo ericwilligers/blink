@@ -407,12 +407,20 @@ SelectorChecker::Match SelectorChecker::matchForShadowDistributed(const Element*
     return SelectorFailsLocally;
 }
 
-static inline bool containsHTMLSpace(const AtomicString& string)
+template<typename CharType>
+static inline bool containsHTMLSpaceTemplate(const CharType* string, unsigned length)
 {
-    for (unsigned i = 0; i < string.length(); i++)
-        if (isHTMLSpace<UChar>(string[i]))
+    for (unsigned i = 0; i < length; ++i)
+        if (isHTMLSpace<CharType>(string[i]))
             return true;
     return false;
+}
+
+static inline bool containsHTMLSpace(const AtomicString& string)
+{
+    if (LIKELY(string.is8Bit()))
+        return containsHTMLSpaceTemplate<LChar>(string.characters8(), string.length());
+    return containsHTMLSpaceTemplate<UChar>(string.characters16(), string.length());
 }
 
 static bool attributeValueMatches(const Attribute& attributeItem, CSSSelector::Match match, const AtomicString& selectorValue, bool caseSensitive)
@@ -492,9 +500,10 @@ static bool anyAttributeMatches(Element& element, CSSSelector::Match match, cons
 
     const AtomicString& selectorValue =  selector.value();
 
-    unsigned attributeCount = element.attributeCount();
-    for (size_t i = 0; i < attributeCount; ++i) {
-        const Attribute& attributeItem = element.attributeItem(i);
+    AttributeIteratorAccessor attributes = element.attributesIterator();
+    AttributeConstIterator end = attributes.end();
+    for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
+        const Attribute& attributeItem = **it;
 
         if (!attributeItem.matches(selectorAttr))
             continue;
@@ -540,10 +549,8 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
     if (selector.m_match == CSSSelector::Id)
         return element.hasID() && element.idForStyleResolution() == selector.value();
 
-    if (selector.isAttributeSelector()) {
-        if (!anyAttributeMatches(element, static_cast<CSSSelector::Match>(selector.m_match), selector))
-            return false;
-    }
+    if (selector.isAttributeSelector())
+        return anyAttributeMatches(element, static_cast<CSSSelector::Match>(selector.m_match), selector);
 
     if (selector.m_match == CSSSelector::PseudoClass) {
         // Handle :not up front.
@@ -764,7 +771,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
                 if (context.elementStyle)
                     context.elementStyle->setAffectedByDrag();
                 else
-                    element.setChildrenAffectedByDrag();
+                    element.setChildrenOrSiblingsAffectedByDrag();
             }
             if (element.renderer() && element.renderer()->isDragging())
                 return true;
@@ -774,7 +781,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
                 if (context.elementStyle)
                     context.elementStyle->setAffectedByFocus();
                 else
-                    element.setChildrenAffectedByFocus();
+                    element.setChildrenOrSiblingsAffectedByFocus();
             }
             return matchesFocusPseudoClass(element);
         case CSSSelector::PseudoHover:
@@ -785,7 +792,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
                     if (context.elementStyle)
                         context.elementStyle->setAffectedByHover();
                     else
-                        element.setChildrenAffectedByHover();
+                        element.setChildrenOrSiblingsAffectedByHover();
                 }
                 if (element.hovered() || InspectorInstrumentation::forcePseudoState(&element, CSSSelector::PseudoHover))
                     return true;
@@ -799,7 +806,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
                     if (context.elementStyle)
                         context.elementStyle->setAffectedByActive();
                     else
-                        element.setChildrenAffectedByActive();
+                        element.setChildrenOrSiblingsAffectedByActive();
                 }
                 if (element.active() || InspectorInstrumentation::forcePseudoState(&element, CSSSelector::PseudoActive))
                     return true;

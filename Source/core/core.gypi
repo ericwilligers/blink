@@ -1,4 +1,7 @@
 {
+    'includes': [
+      'core_generated.gypi',
+    ],
     'variables': {
         # Files for which bindings (.cpp and .h files) will be generated
         'core_idl_files': [
@@ -1138,8 +1141,6 @@
             'frame/DOMWindowProperty.h',
             'frame/DOMWindowTimers.cpp',
             'frame/DOMWindowTimers.h',
-            'frame/DeprecatedScheduleStyleRecalcDuringCompositingUpdate.cpp',
-            'frame/DeprecatedScheduleStyleRecalcDuringCompositingUpdate.h',
             'frame/DeprecatedScheduleStyleRecalcDuringLayout.cpp',
             'frame/DeprecatedScheduleStyleRecalcDuringLayout.h',
             'frame/DeviceSensorEventController.cpp',
@@ -2142,8 +2143,6 @@
             'dom/VisitedLinkState.h',
             'dom/WeakNodeMap.cpp',
             'dom/WeakNodeMap.h',
-            'dom/WheelController.cpp',
-            'dom/WheelController.h',
             'dom/XMLDocument.cpp',
             'dom/XMLDocument.h',
             'dom/custom/CustomElement.cpp',
@@ -2282,6 +2281,8 @@
             'html/ClassList.h',
             'html/DOMFormData.cpp',
             'html/DOMFormData.h',
+            'html/DocumentNameCollection.cpp',
+            'html/DocumentNameCollection.h',
             'html/FormAssociatedElement.cpp',
             'html/FormDataList.cpp',
             'html/FormDataList.h',
@@ -2495,6 +2496,8 @@
             'html/URLRegistry.h',
             'html/ValidityState.cpp',
             'html/ValidityState.h',
+            'html/WindowNameCollection.cpp',
+            'html/WindowNameCollection.h',
             'html/canvas/ANGLEInstancedArrays.cpp',
             'html/canvas/ANGLEInstancedArrays.h',
             'html/canvas/Canvas2DContextAttributes.cpp',
@@ -2685,6 +2688,8 @@
             'html/imports/HTMLImportState.h',
             'html/imports/HTMLImportStateResolver.cpp',
             'html/imports/HTMLImportStateResolver.h',
+            'html/imports/HTMLImportTreeRoot.cpp',
+            'html/imports/HTMLImportTreeRoot.h',
             'html/imports/HTMLImportsController.cpp',
             'html/imports/HTMLImportsController.h',
             'html/imports/LinkImport.cpp',
@@ -3295,12 +3300,12 @@
           'testing/TypeConversions.idl',
         ],
         'generated_webcore_testing_idl_files': [
-          '<(SHARED_INTERMEDIATE_DIR)/blink/InternalRuntimeFlags.idl',
-          '<(SHARED_INTERMEDIATE_DIR)/blink/InternalSettingsGenerated.idl',
+          '<(blink_core_output_dir)/InternalRuntimeFlags.idl',
+          '<(blink_core_output_dir)/InternalSettingsGenerated.idl',
         ],
         'webcore_testing_files': [
-            '<(SHARED_INTERMEDIATE_DIR)/blink/InternalSettingsGenerated.cpp',
-            '<(SHARED_INTERMEDIATE_DIR)/blink/InternalSettingsGenerated.h',
+            '<(blink_core_output_dir)/InternalSettingsGenerated.cpp',
+            '<(blink_core_output_dir)/InternalSettingsGenerated.h',
             'testing/DummyPageHolder.cpp',
             'testing/DummyPageHolder.h',
             'testing/GCObservation.cpp',

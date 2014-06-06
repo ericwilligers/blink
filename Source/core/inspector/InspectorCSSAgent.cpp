@@ -40,6 +40,7 @@
 #include "core/css/CSSStyleRule.h"
 #include "core/css/CSSStyleSheet.h"
 #include "core/css/MediaList.h"
+#include "core/css/MediaQuery.h"
 #include "core/css/StylePropertySet.h"
 #include "core/css/StyleRule.h"
 #include "core/css/StyleSheet.h"
@@ -48,7 +49,6 @@
 #include "core/css/resolver/StyleResolver.h"
 #include "core/dom/Node.h"
 #include "core/dom/NodeList.h"
-#include "core/dom/VisitedLinkState.h"
 #include "core/fetch/CSSStyleSheetResource.h"
 #include "core/fetch/ResourceClient.h"
 #include "core/fetch/ResourceFetcher.h"
@@ -66,7 +66,6 @@
 #include "core/rendering/RenderObject.h"
 #include "core/rendering/RenderText.h"
 #include "core/rendering/RenderTextFragment.h"
-#include "core/rendering/style/RenderStyleConstants.h"
 #include "platform/fonts/Font.h"
 #include "platform/fonts/GlyphBuffer.h"
 #include "platform/fonts/WidthIterator.h"
@@ -638,6 +637,21 @@ bool InspectorCSSAgent::forcePseudoState(Element* element, CSSSelector::PseudoTy
     }
 }
 
+void InspectorCSSAgent::getMediaQueries(ErrorString* errorString, RefPtr<TypeBuilder::Array<TypeBuilder::CSS::CSSMedia> >& medias)
+{
+    medias = TypeBuilder::Array<TypeBuilder::CSS::CSSMedia>::create();
+    for (IdToInspectorStyleSheet::iterator it = m_idToInspectorStyleSheet.begin(); it != m_idToInspectorStyleSheet.end(); ++it) {
+        RefPtr<InspectorStyleSheet> styleSheet = it->value;
+        collectMediaQueriesFromStyleSheet(styleSheet->pageStyleSheet(), medias.get());
+        const CSSRuleVector& flatRules = styleSheet->flatRules();
+        for (unsigned i = 0; i < flatRules.size(); ++i) {
+            CSSRule* rule = flatRules.at(i).get();
+            if (rule->type() == CSSRule::MEDIA_RULE)
+                collectMediaQueriesFromRule(rule, medias.get());
+        }
+    }
+}
+
 void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int nodeId, const bool* includePseudo, const bool* includeInherited, RefPtr<TypeBuilder::Array<TypeBuilder::CSS::RuleMatch> >& matchedCSSRules, RefPtr<TypeBuilder::Array<TypeBuilder::CSS::PseudoIdMatches> >& pseudoIdMatches, RefPtr<TypeBuilder::Array<TypeBuilder::CSS::InheritedStyleEntry> >& inheritedEntries)
 {
     Element* element = elementForId(errorString, nodeId);
@@ -669,7 +683,7 @@ void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int no
     StyleResolver& styleResolver = ownerDocument->ensureStyleResolver();
 
     RefPtrWillBeRawPtr<CSSRuleList> matchedRules = styleResolver.pseudoCSSRulesForElement(element, elementPseudoId, StyleResolver::AllCSSRules);
-    matchedCSSRules = buildArrayForMatchedRuleList(matchedRules.get(), originalElement, true);
+    matchedCSSRules = buildArrayForMatchedRuleList(matchedRules.get(), originalElement);
 
     // Pseudo elements.
     if (!elementPseudoId && (!includePseudo || *includePseudo)) {
@@ -679,7 +693,7 @@ void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int no
             if (matchedRules && matchedRules->length()) {
                 RefPtr<TypeBuilder::CSS::PseudoIdMatches> matches = TypeBuilder::CSS::PseudoIdMatches::create()
                     .setPseudoId(static_cast<int>(pseudoId))
-                    .setMatches(buildArrayForMatchedRuleList(matchedRules.get(), element, false));
+                    .setMatches(buildArrayForMatchedRuleList(matchedRules.get(), element));
                 pseudoElements->addItem(matches.release());
             }
         }
@@ -695,7 +709,7 @@ void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int no
             StyleResolver& parentStyleResolver = parentElement->ownerDocument()->ensureStyleResolver();
             RefPtrWillBeRawPtr<CSSRuleList> parentMatchedRules = parentStyleResolver.cssRulesForElement(parentElement, StyleResolver::AllCSSRules);
             RefPtr<TypeBuilder::CSS::InheritedStyleEntry> entry = TypeBuilder::CSS::InheritedStyleEntry::create()
-                .setMatchedCSSRules(buildArrayForMatchedRuleList(parentMatchedRules.get(), parentElement, true));
+                .setMatchedCSSRules(buildArrayForMatchedRuleList(parentMatchedRules.get(), parentElement));
             if (parentElement->style() && parentElement->style()->length()) {
                 InspectorStyleSheetForInlineStyle* styleSheet = asInspectorStyleSheet(parentElement);
                 if (styleSheet)
@@ -992,14 +1006,45 @@ PassRefPtr<TypeBuilder::CSS::CSSMedia> InspectorCSSAgent::buildMediaObject(const
         break;
     }
 
+    const MediaQuerySet* queries = media->queries();
+    const WillBeHeapVector<OwnPtrWillBeMember<MediaQuery> >& queryVector = queries->queryVector();
+    bool hasMediaQueryItems = false;
+    RefPtr<TypeBuilder::Array<TypeBuilder::Array<TypeBuilder::CSS::MediaQueryExpression> > > mediaListArray = TypeBuilder::Array<TypeBuilder::Array<TypeBuilder::CSS::MediaQueryExpression> >::create();
+    for (size_t i = 0; i < queryVector.size(); ++i) {
+        MediaQuery* query = queryVector.at(i).get();
+        const ExpressionHeapVector& expressions = query->expressions();
+        RefPtr<TypeBuilder::Array<TypeBuilder::CSS::MediaQueryExpression> > expressionArray = TypeBuilder::Array<TypeBuilder::CSS::MediaQueryExpression>::create();
+        bool hasExpressionItems = false;
+        for (size_t j = 0; j < expressions.size(); ++j) {
+            MediaQueryExp* mediaQueryExp = expressions.at(j).get();
+            MediaQueryExpValue expValue = mediaQueryExp->expValue();
+            if (!expValue.isValue)
+                continue;
+            const char* valueName = CSSPrimitiveValue::unitTypeToString(expValue.unit);
+            RefPtr<TypeBuilder::CSS::MediaQueryExpression> mediaQueryExpression = TypeBuilder::CSS::MediaQueryExpression::create()
+                .setValue(expValue.value)
+                .setUnit(String(valueName))
+                .setFeature(mediaQueryExp->mediaFeature());
+            expressionArray->addItem(mediaQueryExpression);
+            hasExpressionItems = true;
+        }
+        if (hasExpressionItems) {
+            mediaListArray->addItem(expressionArray);
+            hasMediaQueryItems = true;
+        }
+    }
+
     RefPtr<TypeBuilder::CSS::CSSMedia> mediaObject = TypeBuilder::CSS::CSSMedia::create()
         .setText(media->mediaText())
         .setSource(source);
+    if (hasMediaQueryItems)
+        mediaObject->setMediaList(mediaListArray);
 
     if (parentStyleSheet && mediaListSource != MediaListSourceLinkedSheet) {
         if (InspectorStyleSheet* inspectorStyleSheet = m_cssStyleSheetToInspectorStyleSheet.get(parentStyleSheet))
             mediaObject->setParentStyleSheetId(inspectorStyleSheet->id());
     }
+
     if (!sourceURL.isEmpty()) {
         mediaObject->setSourceURL(sourceURL);
 
@@ -1014,61 +1059,75 @@ PassRefPtr<TypeBuilder::CSS::CSSMedia> InspectorCSSAgent::buildMediaObject(const
     return mediaObject.release();
 }
 
+bool InspectorCSSAgent::collectMediaQueriesFromStyleSheet(CSSStyleSheet* styleSheet, TypeBuilder::Array<TypeBuilder::CSS::CSSMedia>* mediaArray)
+{
+    bool addedItems = false;
+    MediaList* mediaList = styleSheet->media();
+    String sourceURL;
+    if (mediaList && mediaList->length()) {
+        Document* doc = styleSheet->ownerDocument();
+        if (doc)
+            sourceURL = doc->url();
+        else if (!styleSheet->contents()->baseURL().isEmpty())
+            sourceURL = styleSheet->contents()->baseURL();
+        else
+            sourceURL = "";
+        mediaArray->addItem(buildMediaObject(mediaList, styleSheet->ownerNode() ? MediaListSourceLinkedSheet : MediaListSourceInlineSheet, sourceURL, styleSheet));
+        addedItems = true;
+    }
+    return addedItems;
+}
+
+bool InspectorCSSAgent::collectMediaQueriesFromRule(CSSRule* rule, TypeBuilder::Array<TypeBuilder::CSS::CSSMedia>* mediaArray)
+{
+    MediaList* mediaList;
+    String sourceURL;
+    CSSStyleSheet* parentStyleSheet = 0;
+    bool isMediaRule = true;
+    bool addedItems = false;
+    if (rule->type() == CSSRule::MEDIA_RULE) {
+        CSSMediaRule* mediaRule = toCSSMediaRule(rule);
+        mediaList = mediaRule->media();
+        parentStyleSheet = mediaRule->parentStyleSheet();
+    } else if (rule->type() == CSSRule::IMPORT_RULE) {
+        CSSImportRule* importRule = toCSSImportRule(rule);
+        mediaList = importRule->media();
+        parentStyleSheet = importRule->parentStyleSheet();
+        isMediaRule = false;
+    } else {
+        mediaList = 0;
+    }
+
+    if (parentStyleSheet) {
+        sourceURL = parentStyleSheet->contents()->baseURL();
+        if (sourceURL.isEmpty())
+            sourceURL = InspectorDOMAgent::documentURLString(parentStyleSheet->ownerDocument());
+    } else {
+        sourceURL = "";
+    }
+
+    if (mediaList && mediaList->length()) {
+        mediaArray->addItem(buildMediaObject(mediaList, isMediaRule ? MediaListSourceMediaRule : MediaListSourceImportRule, sourceURL, parentStyleSheet));
+        addedItems = true;
+    }
+    return addedItems;
+}
+
 PassRefPtr<TypeBuilder::Array<TypeBuilder::CSS::CSSMedia> > InspectorCSSAgent::buildMediaListChain(CSSRule* rule)
 {
     if (!rule)
         return nullptr;
     RefPtr<TypeBuilder::Array<TypeBuilder::CSS::CSSMedia> > mediaArray = TypeBuilder::Array<TypeBuilder::CSS::CSSMedia>::create();
     bool hasItems = false;
-    MediaList* mediaList;
     CSSRule* parentRule = rule;
-    String sourceURL;
     while (parentRule) {
-        CSSStyleSheet* parentStyleSheet = 0;
-        bool isMediaRule = true;
-        if (parentRule->type() == CSSRule::MEDIA_RULE) {
-            CSSMediaRule* mediaRule = toCSSMediaRule(parentRule);
-            mediaList = mediaRule->media();
-            parentStyleSheet = mediaRule->parentStyleSheet();
-        } else if (parentRule->type() == CSSRule::IMPORT_RULE) {
-            CSSImportRule* importRule = toCSSImportRule(parentRule);
-            mediaList = importRule->media();
-            parentStyleSheet = importRule->parentStyleSheet();
-            isMediaRule = false;
-        } else {
-            mediaList = 0;
-        }
-
-        if (parentStyleSheet) {
-            sourceURL = parentStyleSheet->contents()->baseURL();
-            if (sourceURL.isEmpty())
-                sourceURL = InspectorDOMAgent::documentURLString(parentStyleSheet->ownerDocument());
-        } else {
-            sourceURL = "";
-        }
-
-        if (mediaList && mediaList->length()) {
-            mediaArray->addItem(buildMediaObject(mediaList, isMediaRule ? MediaListSourceMediaRule : MediaListSourceImportRule, sourceURL, parentStyleSheet));
-            hasItems = true;
-        }
-
+        hasItems = collectMediaQueriesFromRule(parentRule, mediaArray.get()) || hasItems;
         if (parentRule->parentRule()) {
             parentRule = parentRule->parentRule();
         } else {
             CSSStyleSheet* styleSheet = parentRule->parentStyleSheet();
             while (styleSheet) {
-                mediaList = styleSheet->media();
-                if (mediaList && mediaList->length()) {
-                    Document* doc = styleSheet->ownerDocument();
-                    if (doc)
-                        sourceURL = doc->url();
-                    else if (!styleSheet->contents()->baseURL().isEmpty())
-                        sourceURL = styleSheet->contents()->baseURL();
-                    else
-                        sourceURL = "";
-                    mediaArray->addItem(buildMediaObject(mediaList, styleSheet->ownerNode() ? MediaListSourceLinkedSheet : MediaListSourceInlineSheet, sourceURL, styleSheet));
-                    hasItems = true;
-                }
+                hasItems = collectMediaQueriesFromStyleSheet(styleSheet, mediaArray.get()) || hasItems;
                 parentRule = styleSheet->ownerRule();
                 if (parentRule)
                     break;
@@ -1277,43 +1336,12 @@ static inline bool matchesPseudoElement(const CSSSelector* selector, PseudoId el
     return selectorPseudoId == elementPseudoId;
 }
 
-static inline bool matchesElement(const CSSSelector& selector, Element& element)
-{
-    SelectorChecker selectorChecker(element.document(), SelectorChecker::QueryingRules);
-    SelectorChecker::SelectorCheckingContext selectorCheckingContext(selector, &element, SelectorChecker::VisitedMatchEnabled);
-    selectorCheckingContext.behaviorAtBoundary = SelectorChecker::StaysWithinTreeScope;
-    selectorCheckingContext.scope = !element.isDocumentNode() ? &element : 0;
-
-    if (selectorChecker.match(selectorCheckingContext, DOMSiblingTraversalStrategy()) == SelectorChecker::SelectorMatches)
-        return true;
-
-    SelectorChecker::SelectorCheckingContext shadowDOMContext(selector, &element, SelectorChecker::VisitedMatchEnabled);
-    shadowDOMContext.behaviorAtBoundary = SelectorChecker::ScopeIsShadowHost;
-    shadowDOMContext.scope = !element.isDocumentNode() ? &element : 0;
-    return selectorChecker.match(shadowDOMContext, DOMSiblingTraversalStrategy()) == SelectorChecker::SelectorMatches;
-}
-
-EInsideLink InspectorCSSAgent::linkStateForElement(Element* element)
-{
-    if (!element->isLink())
-        return NotInsideLink;
-
-    VisitedLinkState& visitedLinkState = element->ownerDocument()->visitedLinkState();
-    EInsideLink linkState = visitedLinkState.determineLinkState(*element);
-    bool forceVisited = forcePseudoState(element, CSSSelector::PseudoVisited);
-    if (forceVisited)
-        linkState = InsideVisitedLink;
-
-    return linkState;
-}
-
-PassRefPtr<TypeBuilder::Array<TypeBuilder::CSS::RuleMatch> > InspectorCSSAgent::buildArrayForMatchedRuleList(CSSRuleList* ruleList, Element* element, bool skipRulesWithoutMatchedSelectors)
+PassRefPtr<TypeBuilder::Array<TypeBuilder::CSS::RuleMatch> > InspectorCSSAgent::buildArrayForMatchedRuleList(CSSRuleList* ruleList, Element* element)
 {
     RefPtr<TypeBuilder::Array<TypeBuilder::CSS::RuleMatch> > result = TypeBuilder::Array<TypeBuilder::CSS::RuleMatch>::create();
     if (!ruleList)
         return result.release();
 
-    EInsideLink linkState = linkStateForElement(element);
     for (unsigned i = 0, size = ruleList->length(); i < size; ++i) {
         CSSStyleRule* rule = asCSSStyleRule(ruleList->item(i));
         RefPtr<TypeBuilder::CSS::CSSRule> ruleObject = buildObjectForRule(rule);
@@ -1323,30 +1351,16 @@ PassRefPtr<TypeBuilder::Array<TypeBuilder::CSS::RuleMatch> > InspectorCSSAgent::
         const CSSSelectorList& selectorList = rule->styleRule()->selectorList();
         long index = 0;
         PseudoId elementPseudoId = element->pseudoId();
-        bool hasMatchingSelectors = false;
         for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(*selector)) {
             const CSSSelector* firstTagHistorySelector = selector;
-            bool matchedPseudo = false;
+            bool matched = false;
             if (elementPseudoId)
-                matchedPseudo = matchesPseudoElement(selector, elementPseudoId); // Modifies |selector|.
-
-            bool matchedElement = matchesElement(*firstTagHistorySelector, *element);
-            if (matchedElement) {
-                unsigned linkMatchType = SelectorChecker::determineLinkMatchType(*firstTagHistorySelector);
-                if (linkState == InsideUnvisitedLink)
-                    matchedElement = linkMatchType & SelectorChecker::MatchLink;
-                else if (linkState == InsideVisitedLink)
-                    matchedElement = linkMatchType & SelectorChecker::MatchVisited;
-            }
-
-            if (matchedPseudo || matchedElement) {
+                matched = matchesPseudoElement(selector, elementPseudoId); // Modifies |selector|.
+            matched |= element->matches(firstTagHistorySelector->selectorText(), IGNORE_EXCEPTION);
+            if (matched)
                 matchingSelectors->addItem(index);
-                hasMatchingSelectors = true;
-            }
             ++index;
         }
-        if (skipRulesWithoutMatchedSelectors && !hasMatchingSelectors)
-            continue;
         RefPtr<TypeBuilder::CSS::RuleMatch> match = TypeBuilder::CSS::RuleMatch::create()
             .setRule(ruleObject.release())
             .setMatchingSelectors(matchingSelectors.release());

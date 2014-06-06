@@ -39,13 +39,13 @@
 #include "core/dom/Document.h"
 #include "core/dom/DocumentMarkerController.h"
 #include "core/dom/Text.h"
-#include "core/dom/WheelController.h"
 #include "core/editing/Editor.h"
 #include "core/editing/FrameSelection.h"
 #include "core/editing/InputMethodController.h"
 #include "core/editing/TextIterator.h"
 #include "core/events/KeyboardEvent.h"
 #include "core/events/WheelEvent.h"
+#include "core/frame/EventHandlerRegistry.h"
 #include "core/frame/FrameHost.h"
 #include "core/frame/FrameView.h"
 #include "core/frame/LocalFrame.h"
@@ -82,9 +82,9 @@
 #include "core/rendering/compositing/RenderLayerCompositor.h"
 #include "modules/device_orientation/DeviceOrientationInspectorAgent.h"
 #include "modules/encryptedmedia/MediaKeysController.h"
-#include "modules/geolocation/GeolocationController.h"
 #include "modules/indexeddb/InspectorIndexedDBAgent.h"
 #include "modules/push_messaging/PushController.h"
+#include "modules/screen_orientation/ScreenOrientationController.h"
 #include "platform/ContextMenu.h"
 #include "platform/ContextMenuItem.h"
 #include "platform/Cursor.h"
@@ -130,7 +130,6 @@
 #include "web/ContextFeaturesClientImpl.h"
 #include "web/DatabaseClientImpl.h"
 #include "web/FullscreenController.h"
-#include "web/GeolocationClientProxy.h"
 #include "web/GraphicsLayerFactoryChromium.h"
 #include "web/LinkHighlight.h"
 #include "web/LocalFileSystemClient.h"
@@ -386,7 +385,6 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_layerTreeViewCommitsDeferred(false)
     , m_matchesHeuristicsForGpuRasterization(false)
     , m_recreatingGraphicsContext(false)
-    , m_geolocationClientProxy(adoptPtr(new GeolocationClientProxy(client ? client->geolocationClient() : 0)))
     , m_flingModifier(0)
     , m_flingSourceDevice(false)
     , m_fullscreenController(FullscreenController::create(this))
@@ -418,8 +416,6 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 
     provideContextFeaturesTo(*m_page, ContextFeaturesClientImpl::create());
     DeviceOrientationInspectorAgent::provideTo(*m_page);
-    provideGeolocationTo(*m_page, m_geolocationClientProxy.get());
-    m_geolocationClientProxy->setController(GeolocationController::from(m_page.get()));
 
     provideLocalFileSystemTo(*m_page, LocalFileSystemClient::create());
     provideDatabaseClientTo(*m_page, DatabaseClientImpl::create());
@@ -434,6 +430,8 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
         providePushControllerTo(*m_page, m_client->webPushClient());
         setDeviceScaleFactor(m_client->screenInfo().deviceScaleFactor);
         setVisibilityState(m_client->visibilityState(), true);
+        if (RuntimeEnabledFeatures::screenOrientationEnabled())
+            ScreenOrientationController::provideTo(*m_page, m_client->webScreenOrientationClient());
     }
 
     m_inspectorSettingsMap = adoptPtr(new SettingsMap);
@@ -583,7 +581,7 @@ bool WebViewImpl::handleMouseWheel(LocalFrame& mainFrame, const WebMouseWheelEve
 
 bool WebViewImpl::scrollBy(const WebFloatSize& delta, const WebFloatSize& velocity)
 {
-    if (m_flingSourceDevice == WebGestureEvent::Touchpad) {
+    if (m_flingSourceDevice == WebGestureDeviceTouchpad) {
         WebMouseWheelEvent syntheticWheel;
         const float tickDivisor = WebCore::WheelEvent::TickMultiplier;
 
@@ -611,7 +609,7 @@ bool WebViewImpl::scrollBy(const WebFloatSize& delta, const WebFloatSize& veloci
         syntheticGestureEvent.globalX = m_globalPositionOnFlingStart.x;
         syntheticGestureEvent.globalY = m_globalPositionOnFlingStart.y;
         syntheticGestureEvent.modifiers = m_flingModifier;
-        syntheticGestureEvent.sourceDevice = WebGestureEvent::Touchscreen;
+        syntheticGestureEvent.sourceDevice = WebGestureDeviceTouchscreen;
 
         if (m_page && m_page->mainFrame() && m_page->mainFrame()->view())
             return handleGestureEvent(syntheticGestureEvent);
@@ -634,7 +632,8 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
         m_globalPositionOnFlingStart = WebPoint(event.globalX, event.globalY);
         m_flingModifier = event.modifiers;
         m_flingSourceDevice = event.sourceDevice;
-        OwnPtr<WebGestureCurve> flingCurve = adoptPtr(Platform::current()->createFlingAnimationCurve(event.sourceDevice, WebFloatPoint(event.data.flingStart.velocityX, event.data.flingStart.velocityY), WebSize()));
+        OwnPtr<WebGestureCurve> flingCurve = adoptPtr(Platform::current()->createFlingAnimationCurve(static_cast<WebGestureDevice>(event.sourceDevice), WebFloatPoint(event.data.flingStart.velocityX, event.data.flingStart.velocityY), WebSize()));
+        ASSERT(flingCurve);
         m_gestureAnimation = WebActiveGestureAnimation::createAtAnimationStart(flingCurve.release(), this);
         scheduleAnimation();
         eventSwallowed = true;
@@ -781,7 +780,8 @@ void WebViewImpl::transferActiveWheelFlingAnimation(const WebActiveWheelFlingPar
     m_positionOnFlingStart = parameters.point;
     m_globalPositionOnFlingStart = parameters.globalPoint;
     m_flingModifier = parameters.modifiers;
-    OwnPtr<WebGestureCurve> curve = adoptPtr(Platform::current()->createFlingAnimationCurve(parameters.sourceDevice, WebFloatPoint(parameters.delta), parameters.cumulativeScroll));
+    OwnPtr<WebGestureCurve> curve = adoptPtr(Platform::current()->createFlingAnimationCurve(static_cast<WebGestureDevice>(parameters.sourceDevice), WebFloatPoint(parameters.delta), parameters.cumulativeScroll));
+    ASSERT(curve);
     m_gestureAnimation = WebActiveGestureAnimation::createWithTimeOffset(curve.release(), this, parameters.startTime);
     scheduleAnimation();
 }
@@ -901,6 +901,10 @@ void WebViewImpl::getSelectionRootBounds(WebRect& bounds) const
 
 void WebViewImpl::acceptLanguagesChanged()
 {
+    if (!page())
+        return;
+
+    page()->acceptLanguagesChanged();
 }
 
 bool WebViewImpl::handleKeyEvent(const WebKeyboardEvent& event)
@@ -1478,7 +1482,7 @@ void WebViewImpl::popupOpened(PopupContainer* popupContainer)
     m_selectPopup = popupContainer;
     ASSERT(mainFrameImpl()->frame()->document());
     Document& document = *mainFrameImpl()->frame()->document();
-    WheelController::from(document)->didAddWheelEventHandler(document);
+    page()->frameHost().eventHandlerRegistry().didAddEventHandler(document, EventHandlerRegistry::WheelEvent);
 }
 
 void WebViewImpl::popupClosed(PopupContainer* popupContainer)
@@ -1487,7 +1491,11 @@ void WebViewImpl::popupClosed(PopupContainer* popupContainer)
     m_selectPopup = nullptr;
     ASSERT(mainFrameImpl()->frame()->document());
     Document& document = *mainFrameImpl()->frame()->document();
-    WheelController::from(document)->didRemoveWheelEventHandler(document);
+    // Remove the handler we added in |popupOpened| conditionally, because the
+    // Document may have already removed it, for instance, due to a navigation.
+    EventHandlerRegistry* registry = &document.frameHost()->eventHandlerRegistry();
+    if (registry->eventHandlerTargets(EventHandlerRegistry::WheelEvent)->contains(&document))
+        registry->didRemoveEventHandler(document, EventHandlerRegistry::WheelEvent);
 }
 
 PagePopup* WebViewImpl::openPagePopup(PagePopupClient* client, const IntRect& originBoundsInRootView)
@@ -1611,10 +1619,6 @@ void WebViewImpl::resize(const WebSize& newSize)
 
         updatePageDefinedViewportConstraints(mainFrameImpl()->frame()->document()->viewportDescription());
         updateMainFrameLayoutSize();
-
-        WebDevToolsAgentPrivate* agentPrivate = devToolsAgentPrivate();
-        if (agentPrivate)
-            agentPrivate->webViewResized(newSize);
 
         // If the virtual viewport pinch mode is enabled, the main frame will be resized
         // after layout so it can be sized to the contentsSize.
@@ -1769,7 +1773,7 @@ bool WebViewImpl::isTrackingRepaints() const
     if (!page())
         return false;
     FrameView* view = page()->mainFrame()->view();
-    return view->isTrackingRepaints();
+    return view->isTrackingPaintInvalidations();
 }
 
 void WebViewImpl::themeChanged()
@@ -3315,10 +3319,11 @@ void WebViewImpl::inspectElementAt(const WebPoint& point)
         HitTestRequest::HitTestRequestType hitType = HitTestRequest::Move | HitTestRequest::ReadOnly | HitTestRequest::AllowChildFrameContent;
         HitTestRequest request(hitType);
 
-        FrameView* frameView = m_page->mainFrame()->view();
-        IntPoint transformedPoint(point);
-        transformedPoint = transformedPoint - frameView->inputEventsOffsetForEmulation();
-        transformedPoint.scale(1 / frameView->inputEventsScaleFactor(), 1 / frameView->inputEventsScaleFactor());
+        WebMouseEvent dummyEvent;
+        dummyEvent.type = WebInputEvent::MouseDown;
+        dummyEvent.x = point.x;
+        dummyEvent.y = point.y;
+        IntPoint transformedPoint = PlatformMouseEventBuilder(m_page->mainFrame()->view(), dummyEvent).position();
         HitTestResult result(m_page->mainFrame()->view()->windowToContents(transformedPoint));
         m_page->mainFrame()->contentRenderer()->hitTest(request, result);
         Node* node = result.innerNode();
@@ -3637,6 +3642,12 @@ void WebViewImpl::setOverlayLayer(WebCore::GraphicsLayer* layer)
     if (!m_rootGraphicsLayer)
         return;
 
+    if (pinchVirtualViewportEnabled()) {
+        m_page->mainFrame()->view()->renderView()->compositor()->setOverlayLayer(layer);
+        return;
+    }
+
+    // FIXME(bokan): This path goes away after virtual viewport pinch is enabled everywhere.
     if (!m_rootTransformLayer)
         m_rootTransformLayer = m_page->mainFrame()->view()->renderView()->compositor()->ensureRootTransformLayer();
 
@@ -3691,7 +3702,7 @@ void WebViewImpl::setRootGraphicsLayer(GraphicsLayer* layer)
         if (layer) {
             m_rootGraphicsLayer = pinchViewport.rootGraphicsLayer();
             m_rootLayer = pinchViewport.rootGraphicsLayer()->platformLayer();
-            m_rootTransformLayer = 0;
+            m_rootTransformLayer = pinchViewport.rootGraphicsLayer();
         } else {
             m_rootGraphicsLayer = 0;
             m_rootLayer = 0;
@@ -3945,6 +3956,8 @@ void WebViewImpl::updateRootLayerTransform()
     if (!m_rootGraphicsLayer)
         return;
 
+    // FIXME(bokan): m_rootTransformLayer is always set here in pinch virtual viewport. This can go away once
+    // that's default everywhere.
     if (!m_rootTransformLayer)
         m_rootTransformLayer = m_page->mainFrame()->view()->renderView()->compositor()->ensureRootTransformLayer();
 

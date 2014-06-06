@@ -213,6 +213,8 @@ public:
 
     void didCommitLoad(LocalFrame*);
 
+    void acceptLanguagesChanged();
+
     static void networkStateChanged(bool online);
     PassOwnPtr<LifecycleNotifier<Page> > createLifecycleNotifier();
 
@@ -241,7 +243,7 @@ private:
     PageAnimator m_animator;
     const OwnPtr<AutoscrollController> m_autoscrollController;
     const OwnPtr<Chrome> m_chrome;
-    const OwnPtr<DragCaretController> m_dragCaretController;
+    const OwnPtrWillBeMember<DragCaretController> m_dragCaretController;
     const OwnPtrWillBeMember<DragController> m_dragController;
     const OwnPtr<FocusController> m_focusController;
     const OwnPtr<ContextMenuController> m_contextMenuController;

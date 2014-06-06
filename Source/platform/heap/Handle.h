@@ -552,7 +552,8 @@ public:
 
     T* operator->() const { return m_raw; }
     T& operator*() const { return *m_raw; }
-    operator RawPtr<T>() const { return m_raw; }
+    template<typename U>
+    operator RawPtr<U>() const { return m_raw; }
 
     template<typename U>
     Member& operator=(const Persistent<U>& other)
@@ -794,6 +795,7 @@ template<typename T, typename U> inline bool operator!=(const PassRefPtr<T>& a, 
 #define OwnPtrWillBePersistent WebCore::Persistent
 #define OwnPtrWillBeRawPtr WTF::RawPtr
 #define PassOwnPtrWillBeRawPtr WTF::RawPtr
+#define WeakPtrWillBeMember WebCore::Member
 #define WeakPtrWillBeRawPtr WTF::RawPtr
 #define WeakPtrWillBeWeakMember WebCore::WeakMember
 #define NoBaseWillBeGarbageCollected WebCore::GarbageCollected
@@ -896,6 +898,7 @@ public:
 #define OwnPtrWillBePersistent WTF::OwnPtr
 #define OwnPtrWillBeRawPtr WTF::OwnPtr
 #define PassOwnPtrWillBeRawPtr WTF::PassOwnPtr
+#define WeakPtrWillBeMember WTF::WeakPtr
 #define WeakPtrWillBeRawPtr WTF::WeakPtr
 #define WeakPtrWillBeWeakMember WTF::WeakPtr
 #define NoBaseWillBeGarbageCollected WebCore::DummyBase

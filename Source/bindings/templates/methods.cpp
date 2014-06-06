@@ -81,6 +81,7 @@ if (listener && !impl->toNode())
 {
     {% if method.arguments_need_try_catch %}
     v8::TryCatch block;
+    V8RethrowTryCatchScope rethrow(block);
     {% endif %}
     {% for argument in method.arguments %}
     {{generate_argument(method, argument, world_suffix) | indent}}
@@ -237,7 +238,7 @@ ScriptState* scriptState = ScriptState::current(info.GetIsolate());
 ExecutionContext* scriptContext = currentExecutionContext(info.GetIsolate());
 {% endif %}
 {% if method.is_call_with_script_arguments %}
-RefPtr<ScriptArguments> scriptArguments(createScriptArguments(info, {{method.number_of_arguments}}));
+RefPtr<ScriptArguments> scriptArguments(createScriptArguments(scriptState, info, {{method.number_of_arguments}}));
 {% endif %}
 {# Call #}
 {% if method.idl_type == 'void' %}
@@ -294,10 +295,7 @@ exceptionState.throwTypeError({{error_message}});
 throwTypeError(ExceptionMessages::failedToConstruct("{{interface_name}}", {{error_message}}), info.GetIsolate());
 {% else %}{# method.has_exception_state #}
 throwTypeError(ExceptionMessages::failedToExecute("{{method.name}}", "{{interface_name}}", {{error_message}}), info.GetIsolate());
-{% endif %}
-{% if method.arguments_need_try_catch %}
-block.ReThrow();
-{%- endif %}{# method.has_exception_state #}
+{% endif %}{# method.has_exception_state #}
 {% endmacro %}
 
 
@@ -402,12 +400,12 @@ static void {{method.name}}MethodCallback{{world_suffix}}(const v8::FunctionCall
     {% endif %}
     {% endif %}{# not method.overloads #}
     {% if world_suffix in method.activity_logging_world_list %}
-    DOMWrapperWorld& world = DOMWrapperWorld::current(info.GetIsolate());
-    if (world.activityLogger()) {
+    V8PerContextData* contextData = V8PerContextData::from(info.GetIsolate()->GetCurrentContext());
+    if (contextData && contextData->activityLogger()) {
         {# FIXME: replace toVectorOfArguments with toNativeArguments(info, 0)
            and delete toVectorOfArguments #}
         Vector<v8::Handle<v8::Value> > loggerArgs = toNativeArguments<v8::Handle<v8::Value> >(info, 0);
-        world.activityLogger()->logMethod("{{interface_name}}.{{method.name}}", info.Length(), loggerArgs.data());
+        contextData->activityLogger()->logMethod("{{interface_name}}.{{method.name}}", info.Length(), loggerArgs.data());
     }
     {% endif %}
     {% if method.is_custom %}
@@ -432,7 +430,7 @@ static void {{method.name}}OriginSafeMethodGetter{{world_suffix}}(const v8::Prop
     static int domTemplateKey; // This address is used for a key to look up the dom template.
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     {# FIXME: 1 case of [DoNotCheckSignature] in Window.idl may differ #}
-    v8::Handle<v8::FunctionTemplate> privateTemplate = data->domTemplate(&domTemplateKey, {{cpp_class}}V8Internal::{{method.name}}MethodCallback{{world_suffix}}, v8Undefined(), {{signature}}, {{method.number_of_required_or_variadic_arguments}});
+    v8::Handle<v8::FunctionTemplate> privateTemplate = data->domTemplate(&domTemplateKey, {{cpp_class}}V8Internal::{{method.name}}MethodCallback{{world_suffix}}, v8Undefined(), {{signature}}, {{method.length}});
 
     v8::Handle<v8::Object> holder = {{v8_class}}::findInstanceInPrototypeChain(info.This(), isolate);
     if (holder.IsEmpty()) {
@@ -444,7 +442,7 @@ static void {{method.name}}OriginSafeMethodGetter{{world_suffix}}(const v8::Prop
     {{cpp_class}}* impl = {{v8_class}}::toNative(holder);
     if (!BindingSecurity::shouldAllowAccessToFrame(isolate, impl->frame(), DoNotReportSecurityError)) {
         static int sharedTemplateKey; // This address is used for a key to look up the dom template.
-        v8::Handle<v8::FunctionTemplate> sharedTemplate = data->domTemplate(&sharedTemplateKey, {{cpp_class}}V8Internal::{{method.name}}MethodCallback{{world_suffix}}, v8Undefined(), {{signature}}, {{method.number_of_required_or_variadic_arguments}});
+        v8::Handle<v8::FunctionTemplate> sharedTemplate = data->domTemplate(&sharedTemplateKey, {{cpp_class}}V8Internal::{{method.name}}MethodCallback{{world_suffix}}, v8Undefined(), {{signature}}, {{method.length}});
         v8SetReturnValue(info, sharedTemplate->GetFunction());
         return;
     }

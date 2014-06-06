@@ -54,7 +54,7 @@ protected:
     DocumentMarkerController& markerController() const { return m_document->markers(); }
 
     PassRefPtrWillBeRawPtr<Text> createTextNode(const char*);
-    void markNodeContents(PassRefPtr<Node>);
+    void markNodeContents(PassRefPtrWillBeRawPtr<Node>);
     void setBodyInnerHTML(const char*);
 
 private:
@@ -74,7 +74,7 @@ PassRefPtrWillBeRawPtr<Text> DocumentMarkerControllerTest::createTextNode(const 
     return document().createTextNode(String::fromUTF8(textContents));
 }
 
-void DocumentMarkerControllerTest::markNodeContents(PassRefPtr<Node> node)
+void DocumentMarkerControllerTest::markNodeContents(PassRefPtrWillBeRawPtr<Node> node)
 {
     // Force renderers to be created; TextIterator, which is used in
     // DocumentMarkerControllerTest::addMarker(), needs them.
@@ -94,7 +94,7 @@ TEST_F(DocumentMarkerControllerTest, DidMoveToNewDocument)
     RefPtrWillBeRawPtr<Element> parent = toElement(document().body()->firstChild()->firstChild());
     markNodeContents(parent.get());
     EXPECT_EQ(1u, markerController().markers().size());
-    RefPtr<Document> anotherDocument = Document::create();
+    RefPtrWillBePersistent<Document> anotherDocument = Document::create();
     anotherDocument->adoptNode(parent.get(), ASSERT_NO_EXCEPTION);
 
     // No more reference to marked node.

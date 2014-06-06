@@ -74,15 +74,12 @@ Node* InjectedScriptHost::scriptValueAsNode(ScriptValue value)
 
 ScriptValue InjectedScriptHost::nodeAsScriptValue(ScriptState* scriptState, Node* node)
 {
+    ScriptState::Scope scope(scriptState);
     v8::Isolate* isolate = scriptState->isolate();
-    v8::HandleScope scope(isolate);
-    v8::Local<v8::Context> context = scriptState->context();
-    v8::Context::Scope contextScope(context);
-
-    ExceptionState exceptionState(ExceptionState::ExecutionContext, "nodeAsScriptValue", "InjectedScriptHost", v8::Handle<v8::Object>(), isolate);
+    ExceptionState exceptionState(ExceptionState::ExecutionContext, "nodeAsScriptValue", "InjectedScriptHost", scriptState->context()->Global(), isolate);
     if (!BindingSecurity::shouldAllowAccessToNode(isolate, node, exceptionState))
         return ScriptValue(scriptState, v8::Null(isolate));
-    return ScriptValue(scriptState, toV8(node, v8::Handle<v8::Object>(), isolate));
+    return ScriptValue(scriptState, toV8(node, scriptState->context()->Global(), isolate));
 }
 
 void V8InjectedScriptHost::inspectedObjectMethodCustom(const v8::FunctionCallbackInfo<v8::Value>& info)

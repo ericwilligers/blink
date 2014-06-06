@@ -82,14 +82,12 @@ public:
     // argument to omit payload.
     virtual void close(int code, const String& reason) OVERRIDE;
     virtual void fail(const String& reason, MessageLevel, const String&, unsigned lineNumber) OVERRIDE;
-    using WebSocketChannel::fail;
     virtual void disconnect() OVERRIDE;
 
     virtual void suspend() OVERRIDE;
     virtual void resume() OVERRIDE;
 
     // SocketStreamHandleClient functions.
-    virtual void willOpenSocketStream(SocketStreamHandle*) OVERRIDE;
     virtual void didOpenSocketStream(SocketStreamHandle*) OVERRIDE;
     virtual void didCloseSocketStream(SocketStreamHandle*) OVERRIDE;
     virtual void didReceiveSocketStreamData(SocketStreamHandle*, const char*, int) OVERRIDE;

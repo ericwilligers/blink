@@ -262,7 +262,7 @@ LocalFrame* ResourceFetcher::frame() const
     if (m_documentLoader)
         return m_documentLoader->frame();
     if (m_document && m_document->importsController())
-        return m_document->importsController()->frame();
+        return m_document->importsController()->master()->frame();
     return 0;
 }
 
@@ -422,10 +422,15 @@ bool ResourceFetcher::checkInsecureContent(Resource::Type type, const KURL& url,
             treatment = TreatAsActiveContent;
             break;
 
+        case Resource::Font:
+            // These resources are passive, but mixed usage is low enough that we
+            // can block them in a mixed context.
+            treatment = TreatAsActiveContent;
+            break;
+
         case Resource::TextTrack:
         case Resource::Raw:
         case Resource::Image:
-        case Resource::Font:
         case Resource::Media:
             // These resources can corrupt only the frame's pixels.
             treatment = TreatAsPassiveContent;
@@ -439,21 +444,46 @@ bool ResourceFetcher::checkInsecureContent(Resource::Type type, const KURL& url,
             break;
         }
     }
+    // FIXME: We need a way to access the top-level frame's mixedContentChecker when that frame
+    // is in a different process from the current frame. Until that is done, we fail loading
+    // mixed content in remote frames.
+    if (frame() && !frame()->tree().top()->isLocalFrame())
+        return false;
     if (treatment == TreatAsActiveContent) {
         if (LocalFrame* f = frame()) {
             if (!f->loader().mixedContentChecker()->canRunInsecureContent(m_document->securityOrigin(), url))
                 return false;
-            LocalFrame* top = f->tree().top();
-            if (top != f && !top->loader().mixedContentChecker()->canRunInsecureContent(top->document()->securityOrigin(), url))
+            Frame* top = f->tree().top();
+            if (top != f && !toLocalFrame(top)->loader().mixedContentChecker()->canRunInsecureContent(toLocalFrame(top)->document()->securityOrigin(), url))
                 return false;
         }
     } else if (treatment == TreatAsPassiveContent) {
         if (LocalFrame* f = frame()) {
-            LocalFrame* top = f->tree().top();
-            if (!top->loader().mixedContentChecker()->canDisplayInsecureContent(top->document()->securityOrigin(), url))
+            Frame* top = f->tree().top();
+            if (!toLocalFrame(top)->loader().mixedContentChecker()->canDisplayInsecureContent(toLocalFrame(top)->document()->securityOrigin(), url))
                 return false;
-            if (type == Resource::Font && MixedContentChecker::isMixedContent(top->document()->securityOrigin(), url))
-                UseCounter::count(top->document(), UseCounter::MixedContentFont);
+            if (MixedContentChecker::isMixedContent(toLocalFrame(top)->document()->securityOrigin(), url)) {
+                switch (type) {
+                case Resource::TextTrack:
+                    UseCounter::count(toLocalFrame(top)->document(), UseCounter::MixedContentTextTrack);
+                    break;
+
+                case Resource::Raw:
+                    UseCounter::count(toLocalFrame(top)->document(), UseCounter::MixedContentRaw);
+                    break;
+
+                case Resource::Image:
+                    UseCounter::count(toLocalFrame(top)->document(), UseCounter::MixedContentImage);
+                    break;
+
+                case Resource::Media:
+                    UseCounter::count(toLocalFrame(top)->document(), UseCounter::MixedContentMedia);
+                    break;
+
+                default:
+                    ASSERT_NOT_REACHED();
+                }
+            }
         }
     } else {
         ASSERT(treatment == TreatAsAlwaysAllowedContent);
@@ -764,15 +794,17 @@ ResourceRequestCachePolicy ResourceFetcher::resourceRequestCachePolicy(const Res
 {
     if (type == Resource::MainResource) {
         FrameLoadType frameLoadType = frame()->loader().loadType();
-        bool isReload = frameLoadType == FrameLoadTypeReload || frameLoadType == FrameLoadTypeReloadFromOrigin;
         if (request.httpMethod() == "POST" && frameLoadType == FrameLoadTypeBackForward)
             return ReturnCacheDataDontLoad;
         if (!m_documentLoader->overrideEncoding().isEmpty() || frameLoadType == FrameLoadTypeBackForward)
             return ReturnCacheDataElseLoad;
-        if (isReload || frameLoadType == FrameLoadTypeSame || request.isConditional() || request.httpMethod() == "POST")
+        if (frameLoadType == FrameLoadTypeReloadFromOrigin)
+            return ReloadBypassingCache;
+        if (frameLoadType == FrameLoadTypeReload || frameLoadType == FrameLoadTypeSame || request.isConditional() || request.httpMethod() == "POST")
             return ReloadIgnoringCacheData;
-        if (LocalFrame* parent = frame()->tree().parent())
-            return parent->document()->fetcher()->resourceRequestCachePolicy(request, type);
+        Frame* parent = frame()->tree().parent();
+        if (parent && parent->isLocalFrame())
+            return toLocalFrame(parent)->document()->fetcher()->resourceRequestCachePolicy(request, type);
         return UseProtocolCachePolicy;
     }
 
@@ -867,10 +899,11 @@ void ResourceFetcher::storeResourceTimingInitiatorInformation(Resource* resource
 
     if (resource->type() == Resource::MainResource) {
         // <iframe>s should report the initial navigation requested by the parent document, but not subsequent navigations.
-        if (frame()->ownerElement() && !frame()->ownerElement()->loadedNonEmptyDocument()) {
-            info->setInitiatorType(frame()->ownerElement()->localName());
+        // FIXME: Resource timing is broken when the parent is a remote frame.
+        if (frame()->deprecatedLocalOwner() && !frame()->deprecatedLocalOwner()->loadedNonEmptyDocument()) {
+            info->setInitiatorType(frame()->deprecatedLocalOwner()->localName());
             m_resourceTimingInfoMap.add(resource, info);
-            frame()->ownerElement()->didLoadNonEmptyDocument();
+            frame()->deprecatedLocalOwner()->didLoadNonEmptyDocument();
         }
     } else {
         m_resourceTimingInfoMap.add(resource, info);

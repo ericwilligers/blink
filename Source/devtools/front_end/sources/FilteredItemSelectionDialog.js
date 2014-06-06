@@ -354,17 +354,29 @@ WebInspector.FilteredItemSelectionDialog.prototype = {
 
     /**
      * @param {number} index
+     * @return {number}
+     */
+    fastHeight: function(index)
+    {
+        if (!this._rowHeight) {
+            var delegateIndex = this._filteredItems[index];
+            var element = this._createItemElement(delegateIndex);
+            this._rowHeight = element.measurePreferredSize(this._viewportControl.contentElement()).height;
+        }
+        return this._rowHeight;
+    },
+
+    /**
+     * @param {number} index
      * @return {!WebInspector.ViewportElement}
      */
     itemElement: function(index)
     {
         var delegateIndex = this._filteredItems[index];
         var element = this._createItemElement(delegateIndex);
-        if (!this._rowHeight)
-            this._rowHeight = element.measurePreferredSize(this._viewportControl.contentElement()).height;
         if (index === this._selectedIndexInFiltered)
             element.classList.add("selected");
-        return new WebInspector.StaticViewportElement(element, this._rowHeight);
+        return new WebInspector.StaticViewportElement(element);
     },
 
     __proto__: WebInspector.DialogDelegate.prototype
@@ -627,11 +639,11 @@ WebInspector.SelectUISourceCodeDialog = function(defaultScores)
     this._defaultScores = defaultScores;
     this._scorer = new WebInspector.FilePathScoreFunction("");
     WebInspector.workspace.addEventListener(WebInspector.Workspace.Events.UISourceCodeAdded, this._uiSourceCodeAdded, this);
-    WebInspector.workspace.addEventListener(WebInspector.Workspace.Events.ProjectWillReset, this._projectWillReset, this);
+    WebInspector.workspace.addEventListener(WebInspector.Workspace.Events.ProjectRemoved, this._projectRemoved, this);
 }
 
 WebInspector.SelectUISourceCodeDialog.prototype = {
-    _projectWillReset: function(event)
+    _projectRemoved: function(event)
     {
         var project = /** @type {!WebInspector.Project} */ (event.data);
         this._populate(project);
@@ -789,7 +801,7 @@ WebInspector.SelectUISourceCodeDialog.prototype = {
     dispose: function()
     {
         WebInspector.workspace.removeEventListener(WebInspector.Workspace.Events.UISourceCodeAdded, this._uiSourceCodeAdded, this);
-        WebInspector.workspace.removeEventListener(WebInspector.Workspace.Events.ProjectWillReset, this._projectWillReset, this);
+        WebInspector.workspace.removeEventListener(WebInspector.Workspace.Events.ProjectRemoved, this._projectRemoved, this);
     },
 
     __proto__: WebInspector.SelectionDialogContentProvider.prototype
@@ -899,6 +911,7 @@ WebInspector.SelectUISourceCodeForProjectTypesDialog.prototype = {
 }
 
 /**
+ * @param {string} name
  * @param {!Array.<string>} types
  * @param {function(!WebInspector.UISourceCode)} callback
  * @param {!Element} relativeToElement

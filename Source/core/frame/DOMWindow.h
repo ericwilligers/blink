@@ -257,7 +257,7 @@ enum PageshowEventPersistence {
         virtual void removeAllEventListeners() OVERRIDE;
 
         using EventTarget::dispatchEvent;
-        bool dispatchEvent(PassRefPtrWillBeRawPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget);
+        bool dispatchEvent(PassRefPtrWillBeRawPtr<Event> prpEvent, PassRefPtrWillBeRawPtr<EventTarget> prpTarget);
 
         void dispatchLoadEvent();
 
@@ -325,6 +325,8 @@ enum PageshowEventPersistence {
 
         // FIXME: This shouldn't be public once DOMWindow becomes ExecutionContext.
         void clearEventQueue();
+
+        void acceptLanguagesChanged();
 
         virtual void trace(Visitor*) OVERRIDE;
 

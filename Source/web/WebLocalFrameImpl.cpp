@@ -132,6 +132,7 @@
 #include "core/rendering/RenderView.h"
 #include "core/rendering/style/StyleInheritedData.h"
 #include "core/timing/Performance.h"
+#include "modules/geolocation/GeolocationController.h"
 #include "modules/notifications/NotificationController.h"
 #include "platform/TraceEvent.h"
 #include "platform/UserGestureIndicator.h"
@@ -178,6 +179,7 @@
 #include "web/CompositionUnderlineVectorBuilder.h"
 #include "web/EventListenerWrapper.h"
 #include "web/FindInPageCoordinates.h"
+#include "web/GeolocationClientProxy.h"
 #include "web/PageOverlay.h"
 #include "web/SharedWorkerRepositoryClientImpl.h"
 #include "web/TextFinder.h"
@@ -544,7 +546,9 @@ void WebLocalFrameImpl::setRemoteWebLayer(WebLayer* webLayer)
     if (webLayer)
         GraphicsLayer::registerContentsLayer(webLayer);
     frame()->setRemotePlatformLayer(webLayer);
-    frame()->ownerElement()->scheduleLayerUpdate();
+    // FIXME: This should be moved to WebRemoteFrame.
+    ASSERT(frame()->deprecatedLocalOwner());
+    frame()->deprecatedLocalOwner()->setNeedsCompositingUpdate();
 }
 
 void WebLocalFrameImpl::setPermissionClient(WebPermissionClient* permissionClient)
@@ -838,7 +842,7 @@ v8::Handle<v8::Value> WebLocalFrameImpl::callFunctionEvenIfScriptDisabled(v8::Ha
 
 v8::Local<v8::Context> WebLocalFrameImpl::mainWorldScriptContext() const
 {
-    return toV8Context(V8PerIsolateData::mainThreadIsolate(), frame(), DOMWrapperWorld::mainWorld());
+    return toV8Context(frame(), DOMWrapperWorld::mainWorld());
 }
 
 void WebLocalFrameImpl::reload(bool ignoreCache)
@@ -1286,7 +1290,7 @@ void WebLocalFrameImpl::extendSelectionAndDelete(int before, int after)
 
 void WebLocalFrameImpl::addStyleSheetByURL(const WebString& url)
 {
-    RefPtr<Element> styleElement = frame()->document()->createElement(HTMLNames::linkTag, false);
+    RefPtrWillBeRawPtr<Element> styleElement = frame()->document()->createElement(HTMLNames::linkTag, false);
 
     styleElement->setAttribute(HTMLNames::typeAttr, "text/css");
     styleElement->setAttribute(HTMLNames::relAttr, "stylesheet");
@@ -1438,14 +1442,12 @@ void WebLocalFrameImpl::increaseMatchCount(int count, int identifier)
 {
     // This function should only be called on the mainframe.
     ASSERT(!parent());
-    ASSERT(m_textFinder);
-    m_textFinder->increaseMatchCount(identifier, count);
+    ensureTextFinder().increaseMatchCount(identifier, count);
 }
 
 void WebLocalFrameImpl::resetMatchCount()
 {
-    ASSERT(m_textFinder);
-    m_textFinder->resetMatchCount();
+    ensureTextFinder().resetMatchCount();
 }
 
 void WebLocalFrameImpl::sendOrientationChangeEvent()
@@ -1472,8 +1474,7 @@ int WebLocalFrameImpl::findMatchMarkersVersion() const
 int WebLocalFrameImpl::selectNearestFindMatch(const WebFloatPoint& point, WebRect* selectionRect)
 {
     ASSERT(!parent());
-    ASSERT(m_textFinder);
-    return m_textFinder->selectNearestFindMatch(point, selectionRect);
+    return ensureTextFinder().selectNearestFindMatch(point, selectionRect);
 }
 
 WebFloatRect WebLocalFrameImpl::activeFindMatchRect()
@@ -1488,8 +1489,7 @@ WebFloatRect WebLocalFrameImpl::activeFindMatchRect()
 void WebLocalFrameImpl::findMatchRects(WebVector<WebFloatRect>& outputRects)
 {
     ASSERT(!parent());
-    ASSERT(m_textFinder);
-    m_textFinder->findMatchRects(outputRects);
+    ensureTextFinder().findMatchRects(outputRects);
 }
 
 void WebLocalFrameImpl::setTickmarks(const WebVector<WebRect>& tickmarks)
@@ -1585,6 +1585,7 @@ WebLocalFrameImpl::WebLocalFrameImpl(WebFrameClient* client)
     , m_permissionClient(0)
     , m_inputEventsScaleFactorForEmulation(1)
     , m_userMediaClientImpl(this)
+    , m_geolocationClientProxy(adoptPtr(new GeolocationClientProxy(client ? client->geolocationClient() : 0)))
 {
     blink::Platform::current()->incrementStatsCounter(webFrameActiveCount);
     frameCount++;
@@ -1610,6 +1611,8 @@ void WebLocalFrameImpl::setWebCoreFrame(PassRefPtr<WebCore::LocalFrame> frame)
 
         provideNotification(*m_frame, notificationPresenter.release());
         provideUserMediaTo(*m_frame, &m_userMediaClientImpl);
+        provideGeolocationTo(*m_frame, m_geolocationClientProxy.get());
+        m_geolocationClientProxy->setController(GeolocationController::from(m_frame.get()));
     }
 }
 

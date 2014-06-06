@@ -95,6 +95,7 @@ class DocumentType;
 class Element;
 class ElementDataCache;
 class Event;
+class EventFactoryBase;
 class EventListener;
 class ExceptionState;
 class FastTextAutosizer;
@@ -102,7 +103,7 @@ class FloatQuad;
 class FloatRect;
 class FontFaceSet;
 class FormController;
-class LocalFrame;
+class Frame;
 class FrameHost;
 class FrameView;
 class HTMLAllCollection;
@@ -129,6 +130,7 @@ class LayoutPoint;
 class LayoutRect;
 class LiveNodeListBase;
 class Locale;
+class LocalFrame;
 class Location;
 class MainThreadTaskRunner;
 class MediaQueryList;
@@ -578,7 +580,7 @@ public:
     virtual String userAgent(const KURL&) const OVERRIDE FINAL;
     virtual void disableEval(const String& errorMessage) OVERRIDE FINAL;
 
-    bool canNavigate(LocalFrame* targetFrame);
+    bool canNavigate(const Frame& targetFrame);
     LocalFrame* findUnsafeParentScrollPropagationBoundary();
 
     CSSStyleSheet& elementSheet();
@@ -641,9 +643,6 @@ public:
     void setAutofocusElement(Element*);
     Element* autofocusElement() const { return m_autofocusElement.get(); }
 
-    void setHoverNode(PassRefPtr<Node>);
-    Node* hoverNode() const { return m_hoverNode.get(); }
-
     void setActiveHoverElement(PassRefPtrWillBeRawPtr<Element>);
     Element* activeHoverElement() const { return m_activeHoverElement.get(); }
 
@@ -693,6 +692,7 @@ public:
     void setWindowAttributeEventListener(const AtomicString& eventType, PassRefPtr<EventListener>);
     EventListener* getWindowAttributeEventListener(const AtomicString& eventType);
 
+    static void registerEventFactory(EventFactoryBase*);
     static PassRefPtrWillBeRawPtr<Event> createEvent(const String& eventType, ExceptionState&);
 
     // keep track of what types of event listeners are registered, so we don't
@@ -793,7 +793,7 @@ public:
     static bool hasValidNamespaceForAttributes(const QualifiedName&);
 
     HTMLElement* body() const;
-    void setBody(PassRefPtr<HTMLElement>, ExceptionState&);
+    void setBody(PassRefPtrWillBeRawPtr<HTMLElement>, ExceptionState&);
 
     HTMLHeadElement* head() const;
 
@@ -829,7 +829,7 @@ public:
 
     Document* parentDocument() const;
     Document& topDocument() const;
-    WeakPtr<Document> contextDocument();
+    WeakPtrWillBeRawPtr<Document> contextDocument();
 
     ScriptRunner* scriptRunner() { return m_scriptRunner.get(); }
 
@@ -1083,11 +1083,13 @@ protected:
 
     void clearXMLVersion() { m_xmlVersion = String(); }
 
+#if !ENABLE(OILPAN)
     virtual void dispose() OVERRIDE;
+#endif
 
     virtual PassRefPtrWillBeRawPtr<Document> cloneDocumentWithoutChildren();
 
-    bool importContainerNodeChildren(ContainerNode* oldContainerNode, PassRefPtr<ContainerNode> newContainerNode, ExceptionState&);
+    bool importContainerNodeChildren(ContainerNode* oldContainerNode, PassRefPtrWillBeRawPtr<ContainerNode> newContainerNode, ExceptionState&);
     void lockCompatibilityMode() { m_compatibilityModeLocked = true; }
 
 private:
@@ -1181,6 +1183,12 @@ private:
 
     bool haveStylesheetsLoaded() const;
 
+    void setHoverNode(PassRefPtrWillBeRawPtr<Node>);
+    Node* hoverNode() const { return m_hoverNode.get(); }
+
+    typedef HashSet<EventFactoryBase*> EventFactorySet;
+    static EventFactorySet& eventFactories();
+
     DocumentLifecycle m_lifecycle;
 
     bool m_hasNodesWithPlaceholderStyle;
@@ -1193,7 +1201,10 @@ private:
 
     LocalFrame* m_frame;
     RawPtrWillBeMember<DOMWindow> m_domWindow;
-    HTMLImportsController* m_importsController;
+    // FIXME: oilpan: when we get rid of the transition types change the
+    // HTMLImportsController to not be a DocumentSupplement since it is
+    // redundant with oilpan.
+    RawPtrWillBeMember<HTMLImportsController> m_importsController;
 
     RefPtrWillBeMember<ResourceFetcher> m_fetcher;
     RefPtrWillBeMember<DocumentParser> m_parser;
@@ -1240,7 +1251,8 @@ private:
     static uint64_t s_globalTreeVersion;
 
     WillBeHeapHashSet<RawPtrWillBeWeakMember<NodeIterator> > m_nodeIterators;
-    HashSet<Range*> m_ranges;
+    typedef WillBeHeapHashSet<RawPtrWillBeWeakMember<Range> > AttachedRangeSet;
+    AttachedRangeSet m_ranges;
 
     unsigned short m_listenerTypes;
 
@@ -1284,7 +1296,7 @@ private:
 
     double m_startTime;
 
-    OwnPtr<ScriptRunner> m_scriptRunner;
+    OwnPtrWillBeMember<ScriptRunner> m_scriptRunner;
 
     WillBeHeapVector<RefPtrWillBeMember<HTMLScriptElement> > m_currentScriptStack;
 
@@ -1335,9 +1347,10 @@ private:
 
     RenderView* m_renderView;
 
-    // FIXME: Oilpan: We should use a real weak pointer here.
+#if !ENABLE(OILPAN)
     WeakPtrFactory<Document> m_weakFactory;
-    WeakPtr<Document> m_contextDocument;
+#endif
+    WeakPtrWillBeWeakMember<Document> m_contextDocument;
 
     bool m_hasFullscreenElementStack; // For early return in FullscreenElementStack::fromIfExists()
 

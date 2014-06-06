@@ -48,6 +48,8 @@ PASS childWindow.navigator.battery.onchargingchange is null
 PASS childWindow.navigator.battery.onchargingtimechange is null
 PASS childWindow.navigator.battery.ondischargingtimechange is null
 PASS childWindow.navigator.battery.onlevelchange is null
+PASS childWindow.navigator.connection.ontypechange is null
+PASS childWindow.navigator.connection.type is window.navigator.connection.type
 PASS childWindow.navigator.cookieEnabled is false
 PASS childWindow.navigator.doNotTrack is null
 PASS childWindow.navigator.language is window.navigator.language
@@ -56,7 +58,8 @@ PASS childWindow.navigator.onLine is window.navigator.onLine
 PASS childWindow.navigator.platform is window.navigator.platform
 PASS childWindow.navigator.product is window.navigator.product
 PASS childWindow.navigator.productSub is window.navigator.productSub
-PASS childWindow.navigator.serviceWorker.current is null
+PASS childWindow.navigator.serviceWorker.controller is null
+PASS childWindow.navigator.serviceWorker.waiting is null
 PASS childWindow.navigator.userAgent is ''
 PASS childWindow.navigator.vendor is window.navigator.vendor
 PASS childWindow.navigator.vendorSub is ''
@@ -98,6 +101,7 @@ PASS childWindow.oninvalid is null
 PASS childWindow.onkeydown is null
 PASS childWindow.onkeypress is null
 PASS childWindow.onkeyup is null
+PASS childWindow.onlanguagechange is null
 PASS childWindow.onload is null
 PASS childWindow.onloadeddata is null
 PASS childWindow.onloadedmetadata is null

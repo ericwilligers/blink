@@ -169,6 +169,8 @@ public:
     };
     void setListener(Listener* listener) { m_listener = listener; }
 
+    bool enabled();
+
     virtual ScriptDebugServer& scriptDebugServer() = 0;
 
     void setBreakpoint(const String& scriptId, int lineNumber, int columnNumber, BreakpointSource, const String& condition = String());
@@ -193,13 +195,10 @@ protected:
 
 private:
     SkipPauseRequest shouldSkipExceptionPause();
-    SkipPauseRequest shouldSkipBreakpointPause();
     SkipPauseRequest shouldSkipStepPause();
 
     void cancelPauseOnNextStatement();
     void addMessageToConsole(MessageSource, MessageType);
-
-    bool enabled();
 
     PassRefPtr<TypeBuilder::Array<TypeBuilder::Debugger::CallFrame> > currentCallFrames();
     PassRefPtr<TypeBuilder::Debugger::StackTrace> currentAsyncStackTrace();
@@ -236,9 +235,12 @@ private:
     InspectorFrontend::Debugger::Reason::Enum m_breakReason;
     RefPtr<JSONObject> m_breakAuxData;
     bool m_javaScriptPauseScheduled;
+    bool m_debuggerStepScheduled;
+    bool m_pausingOnNativeEvent;
     Listener* m_listener;
 
-    int m_skipStepInCount;
+    int m_skippedStepInCount;
+    int m_minFrameCountForSkip;
     bool m_skipAllPauses;
     OwnPtr<ScriptRegexp> m_cachedSkipStackRegExp;
     AsyncCallStackTracker m_asyncCallStackTracker;

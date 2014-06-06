@@ -78,11 +78,12 @@ void ServiceWorkerGlobalScopeProxy::dispatchActivateEvent(int eventID)
     observer->didDispatchEvent();
 }
 
-void ServiceWorkerGlobalScopeProxy::dispatchFetchEvent(int eventID)
+void ServiceWorkerGlobalScopeProxy::dispatchFetchEvent(int eventID, const WebServiceWorkerRequest& webRequest)
 {
     ASSERT(m_workerGlobalScope);
     RefPtr<RespondWithObserver> observer = RespondWithObserver::create(m_workerGlobalScope, eventID);
-    m_workerGlobalScope->dispatchEvent(FetchEvent::create(observer));
+    RefPtr<Request> request = Request::create(webRequest);
+    m_workerGlobalScope->dispatchEvent(FetchEvent::create(observer, request));
     observer->didDispatchEvent();
 }
 

@@ -27,7 +27,6 @@
 
 #include "XLinkNames.h"
 #include "core/rendering/svg/RenderSVGResourceFilter.h"
-#include "core/svg/SVGElementInstance.h"
 #include "core/svg/SVGParserUtilities.h"
 
 namespace WebCore {
@@ -59,6 +58,12 @@ SVGFilterElement::SVGFilterElement(Document& document)
     addToPropertyMap(m_filterUnits);
     addToPropertyMap(m_primitiveUnits);
     addToPropertyMap(m_filterRes);
+}
+
+void SVGFilterElement::trace(Visitor* visitor)
+{
+    visitor->trace(m_clientsToAdd);
+    SVGElement::trace(visitor);
 }
 
 void SVGFilterElement::setFilterRes(unsigned x, unsigned y)
@@ -148,8 +153,8 @@ RenderObject* SVGFilterElement::createRenderer(RenderStyle*)
 {
     RenderSVGResourceFilter* renderer = new RenderSVGResourceFilter(this);
 
-    HashSet<RefPtr<Node> >::iterator layerEnd = m_clientsToAdd.end();
-    for (HashSet<RefPtr<Node> >::iterator it = m_clientsToAdd.begin(); it != layerEnd; ++it)
+    WillBeHeapHashSet<RefPtrWillBeMember<Node> >::iterator layerEnd = m_clientsToAdd.end();
+    for (WillBeHeapHashSet<RefPtrWillBeMember<Node> >::iterator it = m_clientsToAdd.begin(); it != layerEnd; ++it)
         renderer->addClientRenderLayer(it->get());
     m_clientsToAdd.clear();
 

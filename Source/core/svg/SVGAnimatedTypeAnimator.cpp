@@ -25,7 +25,6 @@
 #include "core/svg/SVGAnimatedColor.h"
 #include "core/svg/SVGAnimationElement.h"
 #include "core/svg/SVGElement.h"
-#include "core/svg/SVGElementInstance.h"
 #include "core/svg/SVGLength.h"
 #include "core/svg/SVGLengthList.h"
 #include "core/svg/SVGNumber.h"
@@ -36,22 +35,26 @@
 
 namespace WebCore {
 
-SVGAnimatedTypeAnimator::SVGAnimatedTypeAnimator(AnimatedPropertyType type, SVGAnimationElement* animationElement, SVGElement* contextElement)
-    : m_type(type)
-    , m_animationElement(animationElement)
+SVGAnimatedTypeAnimator::SVGAnimatedTypeAnimator(SVGAnimationElement* animationElement, SVGElement* contextElement)
+    : m_animationElement(animationElement)
     , m_contextElement(contextElement)
 {
     ASSERT(m_animationElement);
     ASSERT(m_contextElement);
-    ASSERT(m_type != AnimatedPoint
-        && m_type != AnimatedStringList
-        && m_type != AnimatedTransform
-        && m_type != AnimatedUnknown);
 
     const QualifiedName& attributeName = m_animationElement->attributeName();
     m_animatedProperty = m_contextElement->propertyFromAttribute(attributeName);
-    if (m_animatedProperty)
-        ASSERT(m_animatedProperty->type() == m_type);
+    m_type = m_animatedProperty ? m_animatedProperty->type()
+        : SVGElement::animatedPropertyTypeForCSSAttribute(attributeName);
+
+    // Only <animateTransform> is allowed to animate AnimatedTransformList.
+    // http://www.w3.org/TR/SVG/animate.html#AnimationAttributesAndProperties
+    if (m_type == AnimatedTransformList && !isSVGAnimateTransformElement(*animationElement))
+        m_type = AnimatedUnknown;
+
+    ASSERT(m_type != AnimatedPoint
+        && m_type != AnimatedStringList
+        && m_type != AnimatedTransform);
 }
 
 SVGAnimatedTypeAnimator::~SVGAnimatedTypeAnimator()
@@ -106,25 +109,22 @@ PassRefPtr<SVGPropertyBase> SVGAnimatedTypeAnimator::createPropertyForAnimation(
         return property.release();
     }
 
-    // These types don't appear in the table in SVGElement::cssPropertyToTypeMap() and thus don't need support.
-    case AnimatedBoolean:
-    case AnimatedNumberList:
-    case AnimatedNumberOptionalNumber:
-    case AnimatedPoint:
-    case AnimatedPoints:
-    case AnimatedRect:
-    case AnimatedTransform:
-    case AnimatedTransformList:
-        ASSERT_NOT_REACHED();
-
-    // These properties are not yet migrated to NewProperty implementation. see http://crbug.com/308818
+    // These types don't appear in the table in SVGElement::animatedPropertyTypeForCSSAttribute() and thus don't need support.
     case AnimatedAngle:
+    case AnimatedBoolean:
     case AnimatedEnumeration:
     case AnimatedInteger:
     case AnimatedIntegerOptionalInteger:
+    case AnimatedNumberList:
+    case AnimatedNumberOptionalNumber:
     case AnimatedPath:
+    case AnimatedPoint:
+    case AnimatedPoints:
     case AnimatedPreserveAspectRatio:
+    case AnimatedRect:
     case AnimatedStringList:
+    case AnimatedTransform:
+    case AnimatedTransformList:
         ASSERT_NOT_REACHED();
 
     case AnimatedUnknown:
@@ -155,19 +155,6 @@ void SVGAnimatedTypeAnimator::calculateFromAndByValues(RefPtr<SVGPropertyBase>& 
 }
 
 namespace {
-
-typedef void (SVGAnimatedPropertyBase::*SVGAnimatedPropertyMethod)();
-
-void invokeMethodOnAllTargetProperties(const WillBeHeapVector<RawPtrWillBeMember<SVGElement> >& list, const QualifiedName& attributeName, SVGAnimatedPropertyMethod method)
-{
-    WillBeHeapVector<RawPtrWillBeMember<SVGElement> >::const_iterator it = list.begin();
-    WillBeHeapVector<RawPtrWillBeMember<SVGElement> >::const_iterator itEnd = list.end();
-    for (; it != itEnd; ++it) {
-        RefPtr<SVGAnimatedPropertyBase> animatedProperty = (*it)->propertyFromAttribute(attributeName);
-        if (animatedProperty)
-            (animatedProperty.get()->*method)();
-    }
-}
 
 void setAnimatedValueOnAllTargetProperties(const WillBeHeapVector<RawPtrWillBeMember<SVGElement> >& list, const QualifiedName& attributeName, PassRefPtr<SVGPropertyBase> passValue)
 {
@@ -207,7 +194,13 @@ void SVGAnimatedTypeAnimator::stopAnimValAnimation(const WillBeHeapVector<RawPtr
     ASSERT(isAnimatingSVGDom());
     SVGElement::InstanceUpdateBlocker blocker(m_contextElement);
 
-    invokeMethodOnAllTargetProperties(list, m_animatedProperty->attributeName(), &SVGAnimatedPropertyBase::animationEnded);
+    WillBeHeapVector<RawPtrWillBeMember<SVGElement> >::const_iterator it = list.begin();
+    WillBeHeapVector<RawPtrWillBeMember<SVGElement> >::const_iterator itEnd = list.end();
+    for (; it != itEnd; ++it) {
+        RefPtr<SVGAnimatedPropertyBase> animatedProperty = (*it)->propertyFromAttribute(m_animatedProperty->attributeName());
+        if (animatedProperty)
+            animatedProperty->animationEnded();
+    }
 }
 
 PassRefPtr<SVGPropertyBase> SVGAnimatedTypeAnimator::resetAnimValToBaseVal(const WillBeHeapVector<RawPtrWillBeMember<SVGElement> >& list)

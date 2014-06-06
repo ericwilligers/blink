@@ -53,7 +53,7 @@ class HTMLImportsController;
 // HTMLImportLoader is owned by HTMLImportsController.
 //
 //
-class HTMLImportLoader FINAL : public ResourceOwner<RawResource> {
+class HTMLImportLoader FINAL : public NoBaseWillBeGarbageCollectedFinalized<HTMLImportLoader>, public ResourceOwner<RawResource> {
 public:
     enum State {
         StateLoading,
@@ -63,17 +63,18 @@ public:
         StateError
     };
 
-    static PassOwnPtr<HTMLImportLoader> create(HTMLImportsController* controller)
+    static PassOwnPtrWillBeRawPtr<HTMLImportLoader> create(HTMLImportsController* controller)
     {
-        return adoptPtr(new HTMLImportLoader(controller));
+        return adoptPtrWillBeNoop(new HTMLImportLoader(controller));
     }
 
     virtual ~HTMLImportLoader();
 
-    Document* document() const { return m_importedDocument.get(); }
-    Document* importedDocument() const;
+    Document* document() const { return m_document.get(); }
     void addImport(HTMLImportChild*);
+#if !ENABLE(OILPAN)
     void removeImport(HTMLImportChild*);
+#endif
     void moveToFirst(HTMLImportChild*);
     HTMLImportChild* firstImport() const { return m_imports[0]; }
     bool isFirstImport(const HTMLImportChild* child) const { return m_imports.size() ? firstImport() == child : false; }
@@ -82,7 +83,9 @@ public:
     bool hasError() const { return m_state == StateError; }
     bool shouldBlockScriptExecution() const;
 
+#if !ENABLE(OILPAN)
     void importDestroyed();
+#endif
     void startLoading(const ResourcePtr<RawResource>&);
 
     // Tells the loader that the parser is done with this import.
@@ -94,6 +97,8 @@ public:
     void didRemoveAllPendingStylesheet();
 
     PassRefPtrWillBeRawPtr<CustomElementMicrotaskQueue> microtaskQueue() const;
+
+    virtual void trace(Visitor*);
 
 private:
     HTMLImportLoader(HTMLImportsController*);
@@ -111,14 +116,16 @@ private:
     void setState(State);
     void didFinishLoading();
     bool hasPendingResources() const;
+#if !ENABLE(OILPAN)
     void clear();
+#endif
 
-    HTMLImportsController* m_controller;
-    Vector<HTMLImportChild*> m_imports;
+    RawPtrWillBeMember<HTMLImportsController> m_controller;
+    WillBeHeapVector<RawPtrWillBeMember<HTMLImportChild> > m_imports;
     State m_state;
-    RefPtr<Document> m_importedDocument;
-    RefPtr<DocumentWriter> m_writer;
-    RefPtrWillBePersistent<CustomElementMicrotaskQueue> m_microtaskQueue;
+    RefPtrWillBeMember<Document> m_document;
+    RefPtrWillBeMember<DocumentWriter> m_writer;
+    RefPtrWillBeMember<CustomElementMicrotaskQueue> m_microtaskQueue;
 };
 
 } // namespace WebCore

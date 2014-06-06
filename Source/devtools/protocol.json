@@ -687,10 +687,10 @@
                 "hidden": true,
                 "properties": [
                     { "name": "name", "type": "string", "description": "Property name." },
-	                { "name": "type", "type": "string", "enum": ["object", "function", "undefined", "string", "number", "boolean", "accessor"], "description": "Object type. Accessor means that the property itself is an accessor property." },
-	                { "name": "value", "type": "string", "optional": true, "description": "User-friendly property value string." },
-	                { "name": "valuePreview", "$ref": "ObjectPreview", "optional": true, "description": "Nested value preview." },
-	                { "name": "subtype", "type": "string", "optional": true, "enum": ["array", "null", "node", "regexp", "date"], "description": "Object subtype hint. Specified for <code>object</code> type values only." }
+                    { "name": "type", "type": "string", "enum": ["object", "function", "undefined", "string", "number", "boolean", "symbol", "accessor"], "description": "Object type. Accessor means that the property itself is an accessor property." },
+                    { "name": "value", "type": "string", "optional": true, "description": "User-friendly property value string." },
+                    { "name": "valuePreview", "$ref": "ObjectPreview", "optional": true, "description": "Nested value preview." },
+                    { "name": "subtype", "type": "string", "optional": true, "enum": ["array", "null", "node", "regexp", "date"], "description": "Object subtype hint. Specified for <code>object</code> type values only." }
                 ]
             },
             {
@@ -698,7 +698,7 @@
                 "type": "object",
                 "description": "Object property descriptor.",
                 "properties": [
-                    { "name": "name", "type": "string", "description": "Property name." },
+                    { "name": "name", "type": "string", "description": "Property name or symbol description." },
                     { "name": "value", "$ref": "RemoteObject", "optional": true, "description": "The value associated with the property." },
                     { "name": "writable", "type": "boolean", "optional": true, "description": "True if the value associated with the property may be changed (data descriptors only)." },
                     { "name": "get", "$ref": "RemoteObject", "optional": true, "description": "A function which serves as a getter for the property, or <code>undefined</code> if there is no getter (accessor descriptors only)." },
@@ -706,8 +706,8 @@
                     { "name": "configurable", "type": "boolean", "description": "True if the type of this property descriptor may be changed and if the property may be deleted from the corresponding object." },
                     { "name": "enumerable", "type": "boolean", "description": "True if this property shows up during enumeration of the properties on the corresponding object." },
                     { "name": "wasThrown", "type": "boolean", "optional": true, "description": "True if the result was thrown during the evaluation." },
-                    { "name": "isOwn", "optional": true, "type": "boolean", "description": "True if the property is owned for the object.", "hidden": true }
-
+                    { "name": "isOwn", "optional": true, "type": "boolean", "description": "True if the property is owned for the object.", "hidden": true },
+                    { "name": "symbol", "$ref": "RemoteObject", "optional": true, "description": "Property symbol object, if the property is of the <code>symbol</code> type.", "hidden": true }
                 ]
             },
             {
@@ -727,7 +727,7 @@
                 "properties": [
                     { "name": "value", "type": "any", "optional": true, "description": "Primitive value, or description string if the value can not be JSON-stringified (like NaN, Infinity, -Infinity, -0)." },
                     { "name": "objectId", "$ref": "RemoteObjectId", "optional": true, "description": "Remote object handle." },
-                    { "name": "type", "optional": true, "hidden": true, "type": "string", "enum": ["object", "function", "undefined", "string", "number", "boolean"], "description": "Object type." }
+                    { "name": "type", "optional": true, "hidden": true, "type": "string", "enum": ["object", "function", "undefined", "string", "number", "boolean", "symbol"], "description": "Object type." }
                 ]
             },
             {
@@ -1164,7 +1164,9 @@
                 "name": "emulateNetworkConditions",
                 "description": "Activates emulation of network conditions.",
                 "parameters": [
-                    { "name": "offline", "type": "boolean", "optional": true, "description": "True to emulate internet disconnection." }
+                    { "name": "domains", "type": "array", "items": { "type": "string" }, "description": "List of affected domains." },
+                    { "name": "maximalThroughput", "type": "number", "description": "Maximal aggregated network throughput." },
+                    { "name": "offline", "type": "boolean", "description": "True to emulate internet disconnection." }
                 ],
                 "hidden": true,
                 "handlers": ["browser"]
@@ -1252,6 +1254,7 @@
                 "parameters": [
                     { "name": "requestId", "$ref": "RequestId", "description": "Request identifier." },
                     { "name": "timestamp", "$ref": "Timestamp", "description": "Timestamp." },
+                    { "name": "type", "$ref": "Page.ResourceType", "description": "Resource type." },
                     { "name": "errorText", "type": "string", "description": "User friendly error message." },
                     { "name": "canceled", "type": "boolean", "optional": true, "description": "True if loading was canceled." }
                 ]
@@ -2588,9 +2591,28 @@
                     { "name": "source", "type": "string", "enum": ["mediaRule", "importRule", "linkedSheet", "inlineSheet"], "description": "Source of the media query: \"mediaRule\" if specified by a @media rule, \"importRule\" if specified by an @import rule, \"linkedSheet\" if specified by a \"media\" attribute in a linked stylesheet's LINK tag, \"inlineSheet\" if specified by a \"media\" attribute in an inline stylesheet's STYLE tag." },
                     { "name": "sourceURL", "type": "string", "optional": true, "description": "URL of the document containing the media query description." },
                     { "name": "range", "$ref": "SourceRange", "optional": true, "description": "The associated rule (@media or @import) header range in the enclosing stylesheet (if available)." },
-                    { "name": "parentStyleSheetId", "$ref": "StyleSheetId", "optional": true, "description": "Identifier of the stylesheet containing this object (if exists)." }
+                    { "name": "parentStyleSheetId", "$ref": "StyleSheetId", "optional": true, "description": "Identifier of the stylesheet containing this object (if exists)." },
+                    { "name": "mediaList", "type": "array", "items": { "$ref": "MediaQuery" }, "optional": true, "hidden": true, "description": "Array of media queries." }
                 ],
                 "description": "CSS media query descriptor."
+            },
+            {
+                "id": "MediaQuery",
+                "type": "array",
+                "items": { "$ref": "MediaQueryExpression" },
+                "description": "An array of media query expressions.",
+                "hidden": true
+            },
+            {
+                "id": "MediaQueryExpression",
+                "type": "object",
+                "properties": [
+                    { "name": "value", "type": "number", "description": "Media query expression value."},
+                    { "name": "unit", "type": "string", "description": "Media query expression units."},
+                    { "name": "feature", "type": "string", "description": "Media query expression feature."}
+                ],
+                "description": "Media query expression data.",
+                "hidden": true
             },
             {
                 "id": "PlatformFontUsage",
@@ -2730,6 +2752,14 @@
                     { "name": "forcedPseudoClasses", "type": "array", "items": { "type": "string", "enum": ["active", "focus", "hover", "visited"] }, "description": "Element pseudo classes to force when computing the element's style." }
                 ],
                 "description": "Ensures that the given node will have specified pseudo-classes whenever its style is computed by the browser."
+            },
+            {
+                "name": "getMediaQueries",
+                "returns": [
+                    { "name": "medias", "type": "array", "items": { "$ref": "CSSMedia" } }
+                ],
+                "description": "Returns all media queries parsed by the rendering engine.",
+                "hidden": true
             }
         ],
         "events": [

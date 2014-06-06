@@ -167,7 +167,7 @@ public:
     void updateLayerPositionsAfterDocumentScroll();
 
     // FIXME: Should updateLayerPositions be private?
-    void updateLayerPositions(RenderGeometryMap*, UpdateLayerPositionsFlags = CheckForRepaint);
+    void updateLayerPositions(RenderGeometryMap*, const RenderLayerModelObject* paintInvalidationContainer, UpdateLayerPositionsFlags = CheckForRepaint);
 
     bool isPaginated() const { return m_isPaginated; }
     RenderLayer* enclosingPaginationLayer() const { return m_enclosingPaginationLayer; }
@@ -206,19 +206,7 @@ public:
     // Part of the issue is with subtree relayout: we don't check if our ancestors have some descendant flags dirty, missing some updates.
     bool hasSelfPaintingLayerDescendant() const { return m_hasSelfPaintingLayerDescendant; }
 
-    // FIXME: We should ASSERT(!m_hasOutOfFlowPositionedDescendantDirty) here. See above.
-    bool hasOutOfFlowPositionedDescendant() const { return m_hasOutOfFlowPositionedDescendant; }
-
-    void setHasOutOfFlowPositionedDescendant(bool hasDescendant) { m_hasOutOfFlowPositionedDescendant = hasDescendant; }
-    void setHasOutOfFlowPositionedDescendantDirty(bool dirty) { m_hasOutOfFlowPositionedDescendantDirty = dirty; }
-
-
-    bool hasUnclippedDescendant() const { return m_hasUnclippedDescendant; }
-    void setHasUnclippedDescendant(bool hasDescendant) { m_hasUnclippedDescendant = hasDescendant; }
-    void updateHasUnclippedDescendant();
-    bool isUnclippedDescendant() const { return m_isUnclippedDescendant; }
-
-    // Will ensure that hasUnclippedDescendant and hasNonCompositiedChild are up to date.
+    // Will ensure that hasNonCompositiedChild are up to date.
     void updateScrollingStateAfterCompositingChange();
     bool hasVisibleNonLayerContent() const { return m_hasVisibleNonLayerContent; }
     bool hasNonCompositedChild() const { ASSERT(isAllowedToQueryCompositingState()); return m_hasNonCompositedChild; }
@@ -351,6 +339,12 @@ public:
     RenderLayer* scrollParent() const;
     RenderLayer* clipParent() const;
 
+    // Adjusts the given rect to the coordinate space of the repaint container's GraphicsLayer backing.
+    void mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect&) const;
+
+    // Computes the bounding repaint rect for |renderObject|, in the coordinate space of |repaintContainer|'s GraphicsLayer backing.
+    static LayoutRect computeRepaintRect(const RenderObject*, const RenderLayer* repaintContainer);
+
     bool needsCompositingLayersRebuiltForClip(const RenderStyle* oldStyle, const RenderStyle* newStyle) const;
     bool needsCompositingLayersRebuiltForOverflow(const RenderStyle* oldStyle, const RenderStyle* newStyle) const;
     bool needsCompositingLayersRebuiltForFilters(const RenderStyle* oldStyle, const RenderStyle* newStyle) const;
@@ -458,12 +452,14 @@ public:
             : opacityAncestor(0)
             , transformAncestor(0)
             , filterAncestor(0)
+            , isUnclippedDescendant(false)
         { }
 
         IntRect clippedAbsoluteBoundingBox;
         const RenderLayer* opacityAncestor;
         const RenderLayer* transformAncestor;
         const RenderLayer* filterAncestor;
+        unsigned isUnclippedDescendant : 1;
     };
 
     void setNeedsToUpdateAncestorDependentProperties();
@@ -474,6 +470,9 @@ public:
     void clearChildNeedsToUpdateAncestorDependantProperties();
 
     const AncestorDependentProperties& ancestorDependentProperties() const { ASSERT(!m_needsToUpdateAncestorDependentProperties); return m_ancestorDependentProperties; }
+
+    // FIXME: Remove this function.
+    bool potentiallyStaleIsUnclippedDescendant() const { return m_ancestorDependentProperties.isUnclippedDescendant; }
 
     bool lostGroupedMapping() const { ASSERT(isAllowedToQueryCompositingState()); return m_lostGroupedMapping; }
     void setLostGroupedMapping(bool b) { m_lostGroupedMapping = b; }
@@ -507,18 +506,11 @@ private:
 
     bool hasOverflowControls() const;
 
-    void setIsUnclippedDescendant(bool isUnclippedDescendant) { m_isUnclippedDescendant = isUnclippedDescendant; }
-
     void setAncestorChainHasSelfPaintingLayerDescendant();
     void dirtyAncestorChainHasSelfPaintingLayerDescendantStatus();
 
-    void setAncestorChainHasOutOfFlowPositionedDescendant();
-    void dirtyAncestorChainHasOutOfFlowPositionedDescendantStatus();
-
     void clipToRect(const LayerPaintingInfo&, GraphicsContext*, const ClipRect&, PaintLayerFlags, BorderRadiusClippingRule = IncludeSelfForBorderRadius);
     void restoreClip(GraphicsContext*, const LayoutRect& paintDirtyRect, const ClipRect&);
-
-    void updateOutOfFlowPositioned(const RenderStyle* oldStyle);
 
     // Returns true if the position changed.
     bool updateLayerPosition();
@@ -633,17 +625,6 @@ private:
     // significant savings, especially if the tree has lots of non-self-painting layers grouped together (e.g. table cells).
     unsigned m_hasSelfPaintingLayerDescendant : 1;
     unsigned m_hasSelfPaintingLayerDescendantDirty : 1;
-
-    unsigned m_hasOutOfFlowPositionedDescendant : 1;
-    unsigned m_hasOutOfFlowPositionedDescendantDirty : 1;
-
-    // This is true if we have an out-of-flow positioned descendant whose
-    // containing block is our ancestor. If this is the case, the descendant
-    // may fall outside of our clip preventing things like opting into
-    // composited scrolling (which causes clipping of all descendants).
-    unsigned m_hasUnclippedDescendant : 1;
-
-    unsigned m_isUnclippedDescendant : 1;
 
     const unsigned m_isRootLayer : 1;
 

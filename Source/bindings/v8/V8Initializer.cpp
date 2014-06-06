@@ -26,11 +26,11 @@
 #include "config.h"
 #include "bindings/v8/V8Initializer.h"
 
-#include "V8DOMException.h"
-#include "V8ErrorEvent.h"
-#include "V8History.h"
-#include "V8Location.h"
-#include "V8Window.h"
+#include "bindings/core/v8/V8DOMException.h"
+#include "bindings/core/v8/V8ErrorEvent.h"
+#include "bindings/core/v8/V8History.h"
+#include "bindings/core/v8/V8Location.h"
+#include "bindings/core/v8/V8Window.h"
 #include "bindings/v8/DOMWrapperWorld.h"
 #include "bindings/v8/ScriptCallStackFactory.h"
 #include "bindings/v8/ScriptController.h"
@@ -111,8 +111,8 @@ static void messageHandlerInMainThread(v8::Handle<v8::Message> message, v8::Hand
     String resource = shouldUseDocumentURL ? enteredWindow->document()->url() : toCoreString(resourceName.As<v8::String>());
     AccessControlStatus corsStatus = message->IsSharedCrossOrigin() ? SharableCrossOrigin : NotSharableCrossOrigin;
 
-    DOMWrapperWorld& world = DOMWrapperWorld::current(isolate);
-    RefPtrWillBeRawPtr<ErrorEvent> event = ErrorEvent::create(errorMessage, resource, message->GetLineNumber(), message->GetStartColumn() + 1, &world);
+    ScriptState* scriptState = ScriptState::current(isolate);
+    RefPtrWillBeRawPtr<ErrorEvent> event = ErrorEvent::create(errorMessage, resource, message->GetLineNumber(), message->GetStartColumn() + 1, &scriptState->world());
     if (V8DOMWrapper::isDOMWrapper(data)) {
         v8::Handle<v8::Object> obj = v8::Handle<v8::Object>::Cast(data);
         const WrapperTypeInfo* type = toWrapperTypeInfo(obj);
@@ -127,8 +127,9 @@ static void messageHandlerInMainThread(v8::Handle<v8::Message> message, v8::Hand
     // avoid storing the exception object, as we can't create a wrapper during context creation.
     // FIXME: Can we even get here during initialization now that we bail out when GetEntered returns an empty handle?
     LocalFrame* frame = enteredWindow->document()->frame();
-    if (frame && frame->script().existingWindowShell(world))
-        V8ErrorHandler::storeExceptionOnErrorEventWrapper(event.get(), data, v8::Isolate::GetCurrent());
+    if (frame && frame->script().existingWindowShell(scriptState->world())) {
+        V8ErrorHandler::storeExceptionOnErrorEventWrapper(event.get(), data, scriptState->context()->Global(), isolate);
+    }
     enteredWindow->document()->reportException(event.release(), callStack, corsStatus);
 }
 
@@ -141,7 +142,7 @@ static void failedAccessCheckCallbackInMainThread(v8::Local<v8::Object> host, v8
     DOMWindow* targetWindow = target->domWindow();
 
     // FIXME: We should modify V8 to pass in more contextual information (context, property, and object).
-    ExceptionState exceptionState(ExceptionState::UnknownContext, 0, 0, v8::Handle<v8::Object>(), isolate);
+    ExceptionState exceptionState(ExceptionState::UnknownContext, 0, 0, isolate->GetCurrentContext()->Global(), isolate);
     exceptionState.throwSecurityError(targetWindow->sanitizedCrossDomainAccessErrorMessage(callingDOMWindow(isolate)), targetWindow->crossDomainAccessErrorMessage(callingDOMWindow(isolate)));
     exceptionState.throwIfNeeded();
 }
@@ -216,15 +217,16 @@ static void messageHandlerInWorker(v8::Handle<v8::Message> message, v8::Handle<v
     isReportingException = true;
 
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    ScriptState* scriptState = ScriptState::current(isolate);
     // During the frame teardown, there may not be a valid context.
-    if (ExecutionContext* context = currentExecutionContext(isolate)) {
+    if (ExecutionContext* context = scriptState->executionContext()) {
         String errorMessage = toCoreString(message->Get());
         TOSTRING_VOID(V8StringResource<>, sourceURL, message->GetScriptResourceName());
 
         RefPtrWillBeRawPtr<ErrorEvent> event = ErrorEvent::create(errorMessage, sourceURL, message->GetLineNumber(), message->GetStartColumn() + 1, &DOMWrapperWorld::current(isolate));
         AccessControlStatus corsStatus = message->IsSharedCrossOrigin() ? SharableCrossOrigin : NotSharableCrossOrigin;
 
-        V8ErrorHandler::storeExceptionOnErrorEventWrapper(event.get(), data, isolate);
+        V8ErrorHandler::storeExceptionOnErrorEventWrapper(event.get(), data, scriptState->context()->Global(), isolate);
         context->reportException(event.release(), nullptr, corsStatus);
     }
 

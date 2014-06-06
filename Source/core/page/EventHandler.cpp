@@ -237,6 +237,24 @@ EventHandler::~EventHandler()
     ASSERT(!m_fakeMouseMoveEventTimer.isActive());
 }
 
+void EventHandler::trace(Visitor* visitor)
+{
+    visitor->trace(m_mousePressNode);
+    visitor->trace(m_capturingMouseEventsNode);
+    visitor->trace(m_nodeUnderMouse);
+    visitor->trace(m_lastNodeUnderMouse);
+    visitor->trace(m_clickNode);
+    visitor->trace(m_dragTarget);
+    visitor->trace(m_frameSetBeingResized);
+    visitor->trace(m_latchedWheelEventNode);
+    visitor->trace(m_previousWheelScrolledNode);
+    visitor->trace(m_targetForTouchID);
+    visitor->trace(m_touchSequenceDocument);
+    visitor->trace(m_scrollGestureHandlingNode);
+    visitor->trace(m_previousGestureScrolledNode);
+    visitor->trace(m_lastDeferredTapElement);
+}
+
 DragState& EventHandler::dragState()
 {
 #if ENABLE(OILPAN)
@@ -538,8 +556,9 @@ bool EventHandler::handleMousePressEventSingleClick(const MouseEventWithHitTestR
         newSelection = expandSelectionToRespectUserSelectAll(innerNode, VisibleSelection(visiblePos));
     }
 
-    bool handled = updateSelectionForMouseDownDispatchingSelectStart(innerNode, newSelection, granularity);
-    return handled;
+    // Updating the selection is considered side-effect of the event and so it doesn't impact the handled state.
+    updateSelectionForMouseDownDispatchingSelectStart(innerNode, newSelection, granularity);
+    return false;
 }
 
 static inline bool canMouseDownStartSelect(Node* node)
@@ -922,10 +941,11 @@ bool EventHandler::bubblingScroll(ScrollDirection direction, ScrollGranularity g
     FrameView* view = frame->view();
     if (view && view->scroll(direction, granularity))
         return true;
-    frame = frame->tree().parent();
-    if (!frame)
+    Frame* parentFrame = frame->tree().parent();
+    if (!parentFrame || !parentFrame->isLocalFrame())
         return false;
-    return frame->eventHandler().bubblingScroll(direction, granularity, m_frame->ownerElement());
+    // FIXME: Broken for OOPI.
+    return toLocalFrame(parentFrame)->eventHandler().bubblingScroll(direction, granularity, m_frame->deprecatedLocalOwner());
 }
 
 IntPoint EventHandler::lastKnownMousePosition() const
@@ -1509,7 +1529,7 @@ bool EventHandler::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent)
     OwnPtr<UserGestureIndicator> gestureIndicator;
 
     if (m_frame->localFrameRoot()->eventHandler().m_lastMouseDownUserGestureToken)
-        gestureIndicator = adoptPtr(new UserGestureIndicator(m_frame->tree().top()->eventHandler().m_lastMouseDownUserGestureToken.release()));
+        gestureIndicator = adoptPtr(new UserGestureIndicator(m_frame->localFrameRoot()->eventHandler().m_lastMouseDownUserGestureToken.release()));
     else
         gestureIndicator = adoptPtr(new UserGestureIndicator(DefinitelyProcessingUserGesture));
 
@@ -3037,8 +3057,10 @@ bool EventHandler::dragHysteresisExceeded(const FloatPoint& dragViewportLocation
 
 void EventHandler::freeClipboard()
 {
-    if (dragState().m_dragClipboard)
+    if (dragState().m_dragClipboard) {
+        dragState().m_dragClipboard->clearDragImage();
         dragState().m_dragClipboard->setAccessPolicy(ClipboardNumb);
+    }
 }
 
 void EventHandler::dragSourceEndedAt(const PlatformMouseEvent& event, DragOperation operation)
@@ -3143,8 +3165,7 @@ bool EventHandler::tryStartDrag(const MouseEventWithHitTestResults& event)
     // image and offset
     if (dragState().m_dragType == DragSourceActionDHTML) {
         if (RenderObject* renderer = dragState().m_dragSrc->renderer()) {
-            // FIXME: This doesn't work correctly with transforms.
-            FloatPoint absPos = renderer->localToAbsolute();
+            FloatPoint absPos = renderer->localToAbsolute(FloatPoint(), UseTransforms);
             IntSize delta = m_mouseDownPos - roundedIntPoint(absPos);
             dragState().m_dragClipboard->setDragImageElement(dragState().m_dragSrc.get(), IntPoint(delta));
         } else {
@@ -3477,7 +3498,7 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
     TargetTouchesHeapMap touchesByTarget;
 
     // Array of touches per state, used to assemble the 'changedTouches' list.
-    typedef HashSet<RefPtr<EventTarget> > EventTargetSet;
+    typedef WillBeHeapHashSet<RefPtrWillBeMember<EventTarget> > EventTargetSet;
     struct {
         // The touches corresponding to the particular change state this struct
         // instance represents.
@@ -3490,7 +3511,7 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
         const PlatformTouchPoint& point = points[i];
         LayoutPoint pagePoint = documentPointForWindowPoint(m_frame, point.pos());
         PlatformTouchPoint::State pointState = point.state();
-        RefPtr<EventTarget> touchTarget;
+        RefPtrWillBeRawPtr<EventTarget> touchTarget = nullptr;
 
         if (pointState == PlatformTouchPoint::TouchReleased || pointState == PlatformTouchPoint::TouchCancelled) {
             // The target should be the original target for this touch, so get

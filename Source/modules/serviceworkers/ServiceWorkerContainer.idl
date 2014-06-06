@@ -31,8 +31,12 @@
 [
     RuntimeEnabled=ServiceWorker
 ] interface ServiceWorkerContainer {
-    [CallWith=ExecutionContext, ImplementedAs=registerServiceWorker] Promise register(DOMString url, optional Dictionary options);
-    [CallWith=ExecutionContext, ImplementedAs=unregisterServiceWorker] Promise unregister(optional DOMString scope);
+    [Unforgeable] readonly attribute ServiceWorker waiting;
+    // FIXME: controller should be unforgeable
+    readonly attribute ServiceWorker controller;
 
-    readonly attribute ServiceWorker current;
+    [CallWith=ScriptState] readonly attribute Promise ready;
+
+    [CallWith=ScriptState, ImplementedAs=registerServiceWorker] Promise register(DOMString url, optional Dictionary options);
+    [CallWith=ScriptState, ImplementedAs=unregisterServiceWorker] Promise unregister(optional DOMString scope);
 };

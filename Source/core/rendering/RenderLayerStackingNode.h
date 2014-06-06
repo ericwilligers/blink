@@ -85,13 +85,9 @@ public:
     bool normalFlowListDirty() const { return m_normalFlowListDirty; }
     void dirtyNormalFlowList();
 
-    enum PaintOrderListType {BeforePromote, AfterPromote};
-    void computePaintOrderList(PaintOrderListType, Vector<RefPtr<Node> >&);
-
     void updateStackingNodesAfterStyleChange(const RenderStyle* oldStyle);
 
     RenderLayerStackingNode* ancestorStackingContextNode() const;
-    RenderLayerStackingNode* ancestorStackingNode() const;
 
     // Gets the enclosing stacking context for this node, possibly the node
     // itself, if it is a stacking context.
@@ -152,22 +148,15 @@ private:
 
     RenderLayer* m_layer;
 
-    // For stacking contexts, m_posZOrderList holds a sorted list of all the
-    // descendant nodes within the stacking context that have z-indices of 0 or greater
-    // (auto will count as 0). m_negZOrderList holds descendants within our stacking context with negative
-    // z-indices.
+    // m_posZOrderList holds a sorted list of all the descendant nodes within
+    // that have z-indices of 0 or greater (auto will count as 0).
+    // m_negZOrderList holds descendants within our stacking context with
+    // negative z-indices.
     OwnPtr<Vector<RenderLayerStackingNode*> > m_posZOrderList;
     OwnPtr<Vector<RenderLayerStackingNode*> > m_negZOrderList;
 
-    // This list contains child nodes that cannot create stacking contexts. For now it is just
-    // overflow layers, but that may change in the future.
+    // This list contains child nodes that cannot create stacking contexts.
     OwnPtr<Vector<RenderLayerStackingNode*> > m_normalFlowList;
-
-    // If this is true, then no non-descendant appears between any of our
-    // descendants in stacking order. This is one of the requirements of being
-    // able to safely become a stacking context.
-    unsigned m_descendantsAreContiguousInStackingOrder : 1;
-    unsigned m_descendantsAreContiguousInStackingOrderDirty : 1;
 
     unsigned m_zOrderListsDirty : 1;
     unsigned m_normalFlowListDirty: 1;

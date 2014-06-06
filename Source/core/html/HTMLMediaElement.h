@@ -234,7 +234,7 @@ public:
     // of one of them here.
     virtual ExecutionContext* executionContext() const OVERRIDE FINAL { return HTMLElement::executionContext(); }
 
-    bool hasSingleSecurityOrigin() const { return !m_player || m_player->hasSingleSecurityOrigin(); }
+    bool hasSingleSecurityOrigin() const { return webMediaPlayer() && webMediaPlayer()->hasSingleSecurityOrigin(); }
 
     bool isFullscreen() const;
     void enterFullscreen();
@@ -394,7 +394,6 @@ private:
     bool potentiallyPlaying() const;
     bool endedPlayback() const;
     bool stoppedDueToErrors() const;
-    bool pausedForUserInteraction() const;
     bool couldPlayIfEnoughData() const;
 
     // Pauses playback without changing any states or generating events

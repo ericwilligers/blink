@@ -235,6 +235,7 @@ InspectorDOMAgent::InspectorDOMAgent(InspectorPageAgent* pageAgent, InjectedScri
     , m_lastNodeId(1)
     , m_searchingForNode(NotSearching)
     , m_suppressAttributeModifiedEvent(false)
+    , m_listener(0)
 {
 }
 
@@ -282,8 +283,10 @@ void InspectorDOMAgent::restore()
 Vector<Document*> InspectorDOMAgent::documents()
 {
     Vector<Document*> result;
-    for (LocalFrame* frame = m_document->frame(); frame; frame = frame->tree().traverseNext()) {
-        Document* document = frame->document();
+    for (Frame* frame = m_document->frame(); frame; frame = frame->tree().traverseNext()) {
+        if (!frame->isLocalFrame())
+            continue;
+        Document* document = toLocalFrame(frame)->document();
         if (!document)
             continue;
         result.append(document);
@@ -416,7 +419,7 @@ Element* InspectorDOMAgent::assertElement(ErrorString* errorString, int nodeId)
     if (!node)
         return 0;
 
-    if (node->nodeType() != Node::ELEMENT_NODE) {
+    if (!node->isElementNode()) {
         *errorString = "Node is not an Element";
         return 0;
     }
@@ -486,6 +489,8 @@ void InspectorDOMAgent::enable(ErrorString*)
     if (enabled())
         return;
     m_state->setBoolean(DOMAgentState::domAgentEnabled, true);
+    if (m_listener)
+        m_listener->domAgentWasEnabled();
 }
 
 bool InspectorDOMAgent::enabled() const
@@ -499,6 +504,8 @@ void InspectorDOMAgent::disable(ErrorString*)
         return;
     m_state->setBoolean(DOMAgentState::domAgentEnabled, false);
     reset();
+    if (m_listener)
+        m_listener->domAgentWasDisabled();
 }
 
 void InspectorDOMAgent::getDocument(ErrorString* errorString, RefPtr<TypeBuilder::DOM::Node>& root)
@@ -519,7 +526,7 @@ void InspectorDOMAgent::getDocument(ErrorString* errorString, RefPtr<TypeBuilder
 void InspectorDOMAgent::pushChildNodesToFrontend(int nodeId, int depth)
 {
     Node* node = nodeForId(nodeId);
-    if (!node || (node->nodeType() != Node::ELEMENT_NODE && node->nodeType() != Node::DOCUMENT_NODE && node->nodeType() != Node::DOCUMENT_FRAGMENT_NODE))
+    if (!node || (!node->isElementNode() && !node->isDocumentNode() && !node->isDocumentFragment()))
         return;
 
     NodeToIdMap* nodeMap = m_idToNodesMap.get(nodeId);
@@ -714,15 +721,15 @@ void InspectorDOMAgent::setAttributesAsText(ErrorString* errorString, int elemen
     }
 
     bool foundOriginalAttribute = false;
-    unsigned numAttrs = parsedElement->attributeCount();
-    for (unsigned i = 0; i < numAttrs; ++i) {
+    AttributeIteratorAccessor attributes = parsedElement->attributesIterator();
+    AttributeConstIterator end = attributes.end();
+    for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
         // Add attribute pair
-        const Attribute& attribute = parsedElement->attributeItem(i);
-        String attributeName = attribute.name().toString();
+        String attributeName = it->name().toString();
         if (shouldIgnoreCase)
             attributeName = attributeName.lower();
         foundOriginalAttribute |= name && attributeName == caseAdjustedName;
-        if (!m_domEditor->setAttribute(element, attributeName, attribute.value(), errorString))
+        if (!m_domEditor->setAttribute(element, attributeName, it->value(), errorString))
             return;
     }
 
@@ -974,17 +981,17 @@ void InspectorDOMAgent::performSearch(ErrorString*, const String& whitespaceTrim
                 if (!element->hasAttributes())
                     break;
 
-                unsigned numAttrs = element->attributeCount();
-                for (unsigned i = 0; i < numAttrs; ++i) {
+                AttributeIteratorAccessor attributes = element->attributesIterator();
+                AttributeConstIterator end = attributes.end();
+                for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
                     // Add attribute pair
-                    const Attribute& attribute = element->attributeItem(i);
-                    if (attribute.localName().find(whitespaceTrimmedQuery, 0, false) != kNotFound) {
+                    if (it->localName().find(whitespaceTrimmedQuery, 0, false) != kNotFound) {
                         resultCollector.add(node);
                         break;
                     }
-                    size_t foundPosition = attribute.value().find(attributeQuery, 0, false);
+                    size_t foundPosition = it->value().find(attributeQuery, 0, false);
                     if (foundPosition != kNotFound) {
-                        if (!exactAttributeMatch || (!foundPosition && attribute.value().length() == attributeQuery.length())) {
+                        if (!exactAttributeMatch || (!foundPosition && it->value().length() == attributeQuery.length())) {
                             resultCollector.add(node);
                             break;
                         }
@@ -1109,7 +1116,7 @@ void InspectorDOMAgent::inspect(Node* inspectedNode)
         return;
 
     Node* node = inspectedNode;
-    while (node && node->nodeType() != Node::ELEMENT_NODE && node->nodeType() != Node::DOCUMENT_NODE && node->nodeType() != Node::DOCUMENT_FRAGMENT_NODE)
+    while (node && !node->isElementNode() && !node->isDocumentNode() && !node->isDocumentFragment())
         node = node->parentOrShadowHostNode();
 
     if (!node)
@@ -1251,12 +1258,13 @@ void InspectorDOMAgent::highlightFrame(
     const RefPtr<JSONObject>* outlineColor)
 {
     LocalFrame* frame = m_pageAgent->frameForId(frameId);
-    if (frame && frame->ownerElement()) {
+    // FIXME: Inspector doesn't currently work cross process.
+    if (frame && frame->deprecatedLocalOwner()) {
         OwnPtr<HighlightConfig> highlightConfig = adoptPtr(new HighlightConfig());
         highlightConfig->showInfo = true; // Always show tooltips for frames.
         highlightConfig->content = parseColor(color);
         highlightConfig->contentOutline = parseColor(outlineColor);
-        m_overlay->highlightNode(frame->ownerElement(), 0 /* eventTarget */, *highlightConfig, false);
+        m_overlay->highlightNode(frame->deprecatedLocalOwner(), 0 /* eventTarget */, *highlightConfig, false);
     }
 }
 
@@ -1589,12 +1597,12 @@ PassRefPtr<TypeBuilder::Array<String> > InspectorDOMAgent::buildArrayForElementA
     // Go through all attributes and serialize them.
     if (!element->hasAttributes())
         return attributesValue.release();
-    unsigned numAttrs = element->attributeCount();
-    for (unsigned i = 0; i < numAttrs; ++i) {
+    AttributeIteratorAccessor attributes = element->attributesIterator();
+    AttributeConstIterator end = attributes.end();
+    for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
         // Add attribute pair
-        const Attribute& attribute = element->attributeItem(i);
-        attributesValue->addItem(attribute.name().toString());
-        attributesValue->addItem(attribute.value());
+        attributesValue->addItem(it->name().toString());
+        attributesValue->addItem(it->value());
     }
     return attributesValue.release();
 }

@@ -44,7 +44,6 @@
 #include "core/rendering/svg/RenderSVGRoot.h"
 #include "core/rendering/svg/RenderSVGViewportContainer.h"
 #include "core/svg/SVGAngleTearOff.h"
-#include "core/svg/SVGElementInstance.h"
 #include "core/svg/SVGNumberTearOff.h"
 #include "core/svg/SVGPreserveAspectRatio.h"
 #include "core/svg/SVGRectTearOff.h"
@@ -377,7 +376,7 @@ bool SVGSVGElement::checkIntersectionOrEnclosure(const SVGElement& element, cons
 PassRefPtrWillBeRawPtr<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(const FloatRect& rect,
     SVGElement* referenceElement, CheckIntersectionOrEnclosure mode) const
 {
-    Vector<RefPtr<Node> > nodes;
+    WillBeHeapVector<RefPtrWillBeMember<Node> > nodes;
 
     const SVGElement* root = this;
     if (referenceElement) {

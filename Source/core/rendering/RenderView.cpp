@@ -201,8 +201,15 @@ bool RenderView::shouldDoFullRepaintForNextLayout() const
 
     if (height() != viewHeight()) {
         if (RenderObject* backgroundRenderer = this->backgroundRenderer()) {
-            if (backgroundRenderer->style()->backgroundImageNeedsFullRepaintOnContainerHeightChange())
+            // When background-attachment is 'fixed', we treat the viewport (instead of the 'root'
+            // i.e. html or body) as the background positioning area, and we should full repaint
+            // viewport resize if the background image is not composited and needs full repaint on
+            // background positioning area resize.
+            if (!m_compositor || !m_compositor->needsFixedRootBackgroundLayer(layer())) {
+                if (backgroundRenderer->style()->hasFixedBackgroundImage()
+                    && mustRepaintFillLayersOnHeightChange(*backgroundRenderer->style()->backgroundLayers()))
                 return true;
+            }
         }
     }
 
@@ -438,6 +445,19 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
     }
 }
 
+void RenderView::invalidateTreeAfterLayout(const RenderLayerModelObject& paintInvalidationContainer)
+{
+    ASSERT(RuntimeEnabledFeatures::repaintAfterLayoutEnabled());
+    ASSERT(!needsLayout());
+
+    // We specifically need to repaint the viewRect since other renderers
+    // short-circuit on full-repaint.
+    if (doingFullRepaint() && !viewRect().isEmpty())
+        repaintViewRectangle(viewRect());
+
+    RenderBlock::invalidateTreeAfterLayout(paintInvalidationContainer);
+}
+
 void RenderView::repaintViewRectangle(const LayoutRect& ur) const
 {
     ASSERT(!ur.isEmpty());
@@ -448,9 +468,12 @@ void RenderView::repaintViewRectangle(const LayoutRect& ur) const
     // We always just invalidate the root view, since we could be an iframe that is clipped out
     // or even invisible.
     Element* elt = document().ownerElement();
-    if (!elt)
-        m_frameView->repaintContentRectangle(pixelSnappedIntRect(ur));
-    else if (RenderBox* obj = elt->renderBox()) {
+    if (!elt) {
+        if (hasLayer() && layer()->compositingState() == PaintsIntoOwnBacking)
+            layer()->repainter().setBackingNeedsRepaintInRect(ur);
+        else
+            m_frameView->contentRectangleForPaintInvalidation(pixelSnappedIntRect(ur));
+    } else if (RenderBox* obj = elt->renderBox()) {
         LayoutRect vr = viewRect();
         LayoutRect r = intersection(ur, vr);
 
@@ -475,7 +498,7 @@ void RenderView::repaintViewAndCompositedLayers()
         compositor()->repaintCompositedLayers();
 }
 
-void RenderView::computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect& rect, bool fixed) const
+void RenderView::mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect& rect, bool fixed) const
 {
     // If a container was specified, and was not 0 or the RenderView,
     // then we should have found it by now.

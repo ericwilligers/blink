@@ -117,6 +117,37 @@ FloatRect PinchViewport::visibleRect() const
     return FloatRect(m_offset, scaledSize);
 }
 
+FloatRect PinchViewport::visibleRectInDocument() const
+{
+    if (!mainFrame() || !mainFrame()->view())
+        return FloatRect();
+
+    FloatRect viewRect = mainFrame()->view()->visibleContentRect();
+    FloatRect pinchRect = visibleRect();
+    pinchRect.moveBy(viewRect.location());
+    return pinchRect;
+}
+
+void PinchViewport::scrollIntoView(const FloatRect& rect)
+{
+    if (!mainFrame() || !mainFrame()->view())
+        return;
+
+    FrameView* view = mainFrame()->view();
+
+    float centeringOffsetX = (visibleRect().width() - rect.width()) / 2;
+    float centeringOffsetY = (visibleRect().height() - rect.height()) / 2;
+
+    FloatPoint targetOffset(
+        rect.x() - centeringOffsetX - visibleRect().x(),
+        rect.y() - centeringOffsetY - visibleRect().y());
+
+    view->setScrollPosition(flooredIntPoint(targetOffset));
+
+    FloatPoint remainder = FloatPoint(targetOffset - view->scrollPosition());
+    move(remainder);
+}
+
 void PinchViewport::setLocation(const FloatPoint& newLocation)
 {
     FloatPoint clampedOffset(clampOffsetToBoundaries(newLocation));
@@ -164,11 +195,11 @@ void PinchViewport::setScale(float scale)
 // the inner/outer viewport fixed-position model for pinch zoom. When finished,
 // the tree will look like this (with * denoting added layers):
 //
-// *innerViewportContainerLayer (fixed pos container)
-//  +- *pageScaleLayer
-//  |   +- *innerViewportScrollLayer
-//  |       +-- overflowControlsHostLayer (root layer)
-//  |           +-- rootTransformLayer (optional)
+// *rootTransformLayer
+//  +- *innerViewportContainerLayer (fixed pos container)
+//      +- *pageScaleLayer
+//  |       +- *innerViewportScrollLayer
+//  |           +-- overflowControlsHostLayer (root layer)
 //  |               +-- outerViewportContainerLayer (fixed pos container) [frame container layer in RenderLayerCompositor]
 //  |               |   +-- outerViewportScrollLayer [frame scroll layer in RenderLayerCompositor]
 //  |               |       +-- content layers ...
@@ -195,6 +226,8 @@ void PinchViewport::attachToLayerTree(GraphicsLayer* currentLayerTreeRoot, Graph
             && !m_pageScaleLayer
             && !m_innerViewportContainerLayer);
 
+        // FIXME: The root transform layer should only be created on demand.
+        m_rootTransformLayer = GraphicsLayer::create(graphicsLayerFactory, this);
         m_innerViewportContainerLayer = GraphicsLayer::create(graphicsLayerFactory, this);
         m_pageScaleLayer = GraphicsLayer::create(graphicsLayerFactory, this);
         m_innerViewportScrollLayer = GraphicsLayer::create(graphicsLayerFactory, this);
@@ -214,6 +247,7 @@ void PinchViewport::attachToLayerTree(GraphicsLayer* currentLayerTreeRoot, Graph
             m_innerViewportContainerLayer->platformLayer());
         m_innerViewportScrollLayer->platformLayer()->setUserScrollable(true, true);
 
+        m_rootTransformLayer->addChild(m_innerViewportContainerLayer.get());
         m_innerViewportContainerLayer->addChild(m_pageScaleLayer.get());
         m_pageScaleLayer->addChild(m_innerViewportScrollLayer.get());
         m_innerViewportContainerLayer->addChild(m_overlayScrollbarHorizontal.get());

@@ -38,11 +38,11 @@ WebInspector.StylesSourceMapping = function(cssModel, workspace)
 {
     this._cssModel = cssModel;
     this._workspace = workspace;
-    this._workspace.addEventListener(WebInspector.Workspace.Events.ProjectWillReset, this._projectWillReset, this);
+    this._workspace.addEventListener(WebInspector.Workspace.Events.ProjectRemoved, this._projectRemoved, this);
     this._workspace.addEventListener(WebInspector.Workspace.Events.UISourceCodeAdded, this._uiSourceCodeAddedToWorkspace, this);
     this._workspace.addEventListener(WebInspector.Workspace.Events.UISourceCodeRemoved, this._uiSourceCodeRemoved, this);
 
-    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameCreatedOrNavigated, this._mainFrameCreatedOrNavigated, this);
+    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._mainFrameNavigated, this);
 
     this._cssModel.addEventListener(WebInspector.CSSStyleModel.Events.StyleSheetChanged, this._styleSheetChanged, this);
     this._initialize();
@@ -183,7 +183,7 @@ WebInspector.StylesSourceMapping.prototype = {
     /**
      * @param {!WebInspector.Event} event
      */
-    _projectWillReset: function(event)
+    _projectRemoved: function(event)
     {
         var project = /** @type {!WebInspector.Project} */ (event.data);
         var uiSourceCodes = project.uiSourceCodes();
@@ -211,7 +211,7 @@ WebInspector.StylesSourceMapping.prototype = {
     /**
      * @param {!WebInspector.Event} event
      */
-    _mainFrameCreatedOrNavigated: function(event)
+    _mainFrameNavigated: function(event)
     {
         for (var url in this._urlToHeadersByFrameId) {
             var uiSourceCode = this._workspace.uiSourceCodeForURL(url);
@@ -398,7 +398,7 @@ WebInspector.StyleFile.prototype = {
     _styleContentSet: function(error)
     {
         if (error)
-            WebInspector.console.showErrorMessage(error);
+            this._mapping._cssModel.target().consoleModel.showErrorMessage(error);
         delete this._isSettingContent;
         this._maybeProcessChange();
     },

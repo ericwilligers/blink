@@ -421,7 +421,6 @@ public:
         PostMessageFromInsecureToSecure = 420,
         DocumentExitPointerLock = 421,
         DocumentPointerLockElement = 422,
-        MixedContentFont = 423,
         PrefixedCursorZoomIn = 424,
         PrefixedCursorZoomOut = 425,
         CSSCharsetRuleEncoding = 426,
@@ -432,6 +431,13 @@ public:
         TextDecoderConstructor = 431,
         TextDecoderDecode= 432,
         FocusInOutEvent = 433,
+        MouseEventMovementX = 434,
+        MouseEventMovementY = 435,
+        MixedContentTextTrack = 436,
+        MixedContentRaw = 437,
+        MixedContentImage = 438,
+        MixedContentMedia = 439,
+
         // Add new features immediately above this line. Don't change assigned
         // numbers of any item, and don't reuse removed slots.
         // Also, run update_use_counter_feature_enum.py in chromium/src/tools/metrics/histograms/

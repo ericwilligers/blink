@@ -187,10 +187,10 @@ public:
 
     // These should all actually return a node, but this is only important for language bindings,
     // which will already know and hold a ref on the right node to return.
-    void insertBefore(PassRefPtr<Node> newChild, Node* refChild, ExceptionState& = ASSERT_NO_EXCEPTION);
-    void replaceChild(PassRefPtr<Node> newChild, Node* oldChild, ExceptionState& = ASSERT_NO_EXCEPTION);
+    void insertBefore(PassRefPtrWillBeRawPtr<Node> newChild, Node* refChild, ExceptionState& = ASSERT_NO_EXCEPTION);
+    void replaceChild(PassRefPtrWillBeRawPtr<Node> newChild, Node* oldChild, ExceptionState& = ASSERT_NO_EXCEPTION);
     void removeChild(Node* child, ExceptionState&);
-    void appendChild(PassRefPtr<Node> newChild, ExceptionState& = ASSERT_NO_EXCEPTION);
+    void appendChild(PassRefPtrWillBeRawPtr<Node> newChild, ExceptionState& = ASSERT_NO_EXCEPTION);
 
     bool hasChildren() const { return firstChild(); }
     virtual PassRefPtrWillBeRawPtr<Node> cloneNode(bool deep = false) = 0;
@@ -752,25 +752,7 @@ protected:
         CreateEditingText = CreateText | HasNameOrIsEditingTextFlag,
     };
 
-    Node(TreeScope* treeScope, ConstructionType type)
-        : m_nodeFlags(type)
-        , m_parentOrShadowHostNode(nullptr)
-        , m_treeScope(treeScope)
-        , m_previous(nullptr)
-        , m_next(nullptr)
-    {
-        ASSERT(m_treeScope || type == CreateDocument || type == CreateShadowRoot);
-        ScriptWrappable::init(this);
-#if !ENABLE(OILPAN)
-        if (m_treeScope)
-            m_treeScope->guardRef();
-#endif
-
-#if !defined(NDEBUG) || (defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS)
-        trackForDebugging();
-#endif
-        InspectorCounters::incrementCounter(InspectorCounters::NodeCounter);
-    }
+    Node(TreeScope*, ConstructionType);
 
     virtual void didMoveToNewDocument(Document& oldDocument);
 
@@ -902,16 +884,7 @@ inline bool isTreeScopeRoot(const Node& node)
 }
 
 // Allow equality comparisons of Nodes by reference or pointer, interchangeably.
-inline bool operator==(const Node& a, const Node& b) { return &a == &b; }
-inline bool operator==(const Node& a, const Node* b) { return &a == b; }
-inline bool operator==(const Node* a, const Node& b) { return a == &b; }
-inline bool operator!=(const Node& a, const Node& b) { return !(a == b); }
-inline bool operator!=(const Node& a, const Node* b) { return !(a == b); }
-inline bool operator!=(const Node* a, const Node& b) { return !(a == b); }
-inline bool operator==(const PassRefPtr<Node>& a, const Node& b) { return a.get() == &b; }
-inline bool operator==(const Node& a, const PassRefPtr<Node>& b) { return &a == b.get(); }
-inline bool operator!=(const PassRefPtr<Node>& a, const Node& b) { return !(a == b); }
-inline bool operator!=(const Node& a, const PassRefPtr<Node>& b) { return !(a == b); }
+DEFINE_COMPARISON_OPERATORS_WITH_REFERENCES_REFCOUNTED(Node)
 
 
 #define DEFINE_NODE_TYPE_CASTS(thisType, predicate) \

@@ -31,11 +31,11 @@
 #include "config.h"
 #include "bindings/v8/V8Binding.h"
 
-#include "V8Element.h"
-#include "V8NodeFilter.h"
-#include "V8Window.h"
-#include "V8WorkerGlobalScope.h"
-#include "V8XPathNSResolver.h"
+#include "bindings/core/v8/V8Element.h"
+#include "bindings/core/v8/V8NodeFilter.h"
+#include "bindings/core/v8/V8Window.h"
+#include "bindings/core/v8/V8WorkerGlobalScope.h"
+#include "bindings/core/v8/V8XPathNSResolver.h"
 #include "bindings/v8/ScriptController.h"
 #include "bindings/v8/V8AbstractEventListener.h"
 #include "bindings/v8/V8BindingMacros.h"
@@ -604,7 +604,7 @@ v8::Local<v8::Context> toV8Context(ExecutionContext* context, DOMWrapperWorld& w
     return v8::Local<v8::Context>();
 }
 
-v8::Local<v8::Context> toV8Context(v8::Isolate* isolate, LocalFrame* frame, DOMWrapperWorld& world)
+v8::Local<v8::Context> toV8Context(LocalFrame* frame, DOMWrapperWorld& world)
 {
     if (!frame)
         return v8::Local<v8::Context>();
@@ -743,11 +743,6 @@ PassRefPtr<JSONValue> v8ToJSONValue(v8::Isolate* isolate, v8::Handle<v8::Value> 
     }
     ASSERT_NOT_REACHED();
     return nullptr;
-}
-
-PassOwnPtr<V8TestingScope> V8TestingScope::create(v8::Isolate* isolate)
-{
-    return adoptPtr(new V8TestingScope(isolate));
 }
 
 V8TestingScope::V8TestingScope(v8::Isolate* isolate)

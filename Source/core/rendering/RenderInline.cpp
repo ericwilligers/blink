@@ -1027,7 +1027,7 @@ LayoutRect RenderInline::clippedOverflowRectForRepaint(const RenderLayerModelObj
     if (cb->hasOverflowClip())
         cb->applyCachedClipAndScrollOffsetForRepaint(repaintRect);
 
-    cb->computeRectForRepaint(repaintContainer, repaintRect);
+    cb->mapRectToRepaintBacking(repaintContainer, repaintRect);
 
     if (outlineSize) {
         for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling()) {
@@ -1052,7 +1052,7 @@ LayoutRect RenderInline::rectWithOutlineForRepaint(const RenderLayerModelObject*
     return r;
 }
 
-void RenderInline::computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect& rect, bool fixed) const
+void RenderInline::mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect& rect, bool fixed) const
 {
     if (RenderView* v = view()) {
         // LayoutState is only valid for root-relative repainting
@@ -1112,7 +1112,7 @@ void RenderInline::computeRectForRepaint(const RenderLayerModelObject* repaintCo
         return;
     }
 
-    o->computeRectForRepaint(repaintContainer, rect, fixed);
+    o->mapRectToRepaintBacking(repaintContainer, rect, fixed);
 }
 
 LayoutSize RenderInline::offsetFromContainer(const RenderObject* container, const LayoutPoint& point, bool* offsetDependsOnPoint) const
@@ -1352,17 +1352,7 @@ void RenderInline::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint& 
     AbsoluteRectsGeneratorContext context(rects, additionalOffset);
     generateLineBoxRects(context);
 
-    for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling()) {
-        if (!curr->isText() && !curr->isListMarker()) {
-            FloatPoint pos(additionalOffset);
-            // FIXME: This doesn't work correctly with transforms.
-            if (curr->hasLayer())
-                pos = curr->localToContainerPoint(FloatPoint(), paintContainer);
-            else if (curr->isBox())
-                pos.move(toRenderBox(curr)->locationOffset());
-            curr->addFocusRingRects(rects, flooredIntPoint(pos), paintContainer);
-        }
-    }
+    addChildFocusRingRects(rects, additionalOffset, paintContainer);
 
     if (continuation()) {
         // If the continuation doesn't paint into the same container, let its repaint container handle it.

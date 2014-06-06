@@ -54,9 +54,9 @@ PASS image1.right is 150
 PASS image1.bottom is 275
 PASS text1.left is 100
 PASS text1.top is within 1 of 283
-PASS text1.width is within 1 of 46
+FAIL text1.width should be within 1 of 46. Was 47.96875.
 PASS text1.height is within 1 of 6
-PASS text1.right is within 1 of 146
+FAIL text1.right should be within 1 of 146. Was 147.96875.
 PASS text1.bottom is within 1 of 289
 
 PASS svg2.left is 75
@@ -103,10 +103,10 @@ PASS image3.height is 50
 PASS image3.right is 1200
 PASS image3.bottom is 550
 PASS text3.left is 1100
-FAIL text3.top should be within 1 of 565. Was 566.140625.
-PASS text3.width is within 1 of 92
+PASS text3.top is within 1 of 565
+FAIL text3.width should be within 1 of 92. Was 95.9375.
 PASS text3.height is within 1 of 12
-PASS text3.right is within 1 of 1192
+FAIL text3.right should be within 1 of 1192. Was 1195.9375.
 PASS text3.bottom is within 1 of 577
 
 PASS successfullyParsed is true

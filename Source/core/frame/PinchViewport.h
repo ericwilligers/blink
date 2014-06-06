@@ -69,6 +69,10 @@ public:
     void attachToLayerTree(GraphicsLayer*, GraphicsLayerFactory*);
     GraphicsLayer* rootGraphicsLayer()
     {
+        return m_rootTransformLayer.get();
+    }
+    GraphicsLayer* containerLayer()
+    {
         return m_innerViewportContainerLayer.get();
     }
 
@@ -95,8 +99,17 @@ public:
     void registerLayersWithTreeView(blink::WebLayerTreeView*) const;
     void clearLayersForTreeView(blink::WebLayerTreeView*) const;
 
-    // The portion of the unzoomed frame visible in the inner "pinch" viewport, in partial CSS pixels.
+    // The portion of the unzoomed frame visible in the inner "pinch" viewport,
+    // in partial CSS pixels. Relative to the main frame.
     FloatRect visibleRect() const;
+
+    // The viewport rect relative to the document origin, in partial CSS pixels.
+    FloatRect visibleRectInDocument() const;
+
+    // Scroll the main frame and pinch viewport so that the given rect in the
+    // top-level document is centered in the viewport. This method will avoid
+    // scrolling the pinch viewport unless necessary.
+    void scrollIntoView(const FloatRect&);
 private:
     // ScrollableArea implementation
     virtual bool isActive() const OVERRIDE { return false; }
@@ -132,6 +145,7 @@ private:
     LocalFrame* mainFrame() const;
 
     FrameHost& m_frameHost;
+    OwnPtr<GraphicsLayer> m_rootTransformLayer;
     OwnPtr<GraphicsLayer> m_innerViewportContainerLayer;
     OwnPtr<GraphicsLayer> m_pageScaleLayer;
     OwnPtr<GraphicsLayer> m_innerViewportScrollLayer;

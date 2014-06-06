@@ -64,6 +64,12 @@ function addEventListener(eventName, listener, capturing) {}
  */
 Array.prototype.remove = function(value, onlyFirst) {}
 /**
+ * @param {!Array.<!T>} array
+ * @this {Array.<!T>}
+ * @template T
+ */
+Array.prototype.pushAll = function(array) {}
+/**
  * @return {!Object.<string, boolean>}
  * @this {Array.<T>}
  * @template T
@@ -471,6 +477,15 @@ CodeMirror.keyMap;
 
 /** @type {{scrollLeft: number, scrollTop: number}} */
 CodeMirror.doc;
+
+/**
+ * @constructor
+ * @extends {Event}
+ */
+function ErrorEvent() {}
+
+/** @type {string} */
+ErrorEvent.prototype.message;
 
 /** @type {boolean} */
 window.dispatchStandaloneTestRunnerMessages;

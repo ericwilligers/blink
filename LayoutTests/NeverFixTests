@@ -18,8 +18,7 @@ fast/harness/sample-fail-mismatch-reftest.html [ WontFix ]
 
 # Platform specific virtual test suites.
 [ Win Mac Android ] virtual/linux-subpixel [ WontFix ]
-[ Linux Mac Android XP ] virtual/windows-directwrite [ WontFix ]
-[ Linux Win Android XP ] virtual/mac-antialiasedtext [ WontFix ]
+[ Linux XP Android XP ] virtual/antialiasedtext [ WontFix ]
 
 # Chrome Win/Linux doesn't support emacs key-bindings.
 [ Win Linux ] editing/pasteboard/emacs-cntl-y-001.html [ WontFix ]
@@ -30,6 +29,9 @@ fast/harness/sample-fail-mismatch-reftest.html [ WontFix ]
 
 # Chrome Mac doesn't support Ctrl+Up/Down key-bindings.
 [ Mac ] editing/input/ctrl-up-down.html [ WontFix ]
+
+# Macs do not support keyboard events to show a context menu.
+[ Mac ] editing/spelling/spelling-on-context-menu-key.html [ WontFix ]
 
 # Chrome uses different keyboard accelerators from those used by Safari, so
 # this test will always fail.

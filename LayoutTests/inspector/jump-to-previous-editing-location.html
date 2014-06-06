@@ -13,19 +13,6 @@ function test()
     var sourcesView = panel._sourcesView;
     var historyManager = sourcesView._historyManager;
     var editorContainer = sourcesView._editorContainer;
-    var shouldLogSimpleHistoryManager = false;
-
-    function logSimpleHistoryManagerMethod(methodName)
-    {
-        if (!shouldLogSimpleHistoryManager)
-            return;
-        InspectorTest.addResult("SimpleHistoryManager." + methodName + " size: " + historyManager._historyManager._entries.length + " active: " + historyManager._historyManager._activeEntryIndex);
-    }
-    InspectorTest.addSniffer(WebInspector.SimpleHistoryManager.prototype, "push", logSimpleHistoryManagerMethod.bind(null, "push"), true);
-    InspectorTest.addSniffer(WebInspector.SimpleHistoryManager.prototype, "active", logSimpleHistoryManagerMethod.bind(null, "active"), true);
-    InspectorTest.addSniffer(WebInspector.SimpleHistoryManager.prototype, "rollback", logSimpleHistoryManagerMethod.bind(null, "rollback"), true);
-    InspectorTest.addSniffer(WebInspector.SimpleHistoryManager.prototype, "rollover", logSimpleHistoryManagerMethod.bind(null, "rollover"), true);
-    InspectorTest.addSniffer(WebInspector.SimpleHistoryManager.prototype, "filterOut", logSimpleHistoryManagerMethod.bind(null, "filterOut"), true);
 
     function rollback()
     {
@@ -60,7 +47,7 @@ function test()
         dumpSelection(editor, "Mouse click (" + lineNumber + ", " + columnNumber + ")");
     }
 
-    function clickAndDump(editor, lines, columns, logLocation)
+    function clickAndDump(editor, lines, columns)
     {
         for (var i = 0; i < lines.length; ++i) {
             var lineNumber = lines[i];
@@ -190,20 +177,6 @@ function test()
 
         function testHistoryDepth(next)
         {
-            function dumpSimpleHistoryManagerState(title)
-            {
-                var simpleHistoryManager = historyManager._historyManager;
-                var entries = simpleHistoryManager._entries;
-                InspectorTest.addResult("=== SimpleHistoryManager state " + title + " ===");
-                InspectorTest.addResult("entries count: " + entries.length + " active entry index: " + simpleHistoryManager._activeEntryIndex);
-                for (var i = entries.length - 1; i >= 0; --i) {
-                    var position = entries[i]._positionHandle.resolve();
-                    var positionText = position ? "{line: " + position.lineNumber + ", column: " + position.columnNumber + "}" : position + "";
-                    var positionMarker = simpleHistoryManager._activeEntryIndex === i ? ">" : " ";
-                    InspectorTest.addResult(positionMarker + "entry[" + i + "] = " + positionText);
-                }
-                InspectorTest.addResult("=== ===");
-            }
             var lines = [];
             var columns = [];
             const jumpsAmount = WebInspector.EditingLocationHistoryManager.HistoryDepth;
@@ -212,19 +185,8 @@ function test()
                 columns.push(7);
             }
             var editor = panel.visibleView.textEditor;
-            //FIXME(lushnikov): here and below excessive dumping to figure out a reason for
-            // unreproducible bot failures.
-            shouldLogSimpleHistoryManager = true;
-            dumpSimpleHistoryManagerState("before filling history stack");
-            clickAndDump(editor, lines, columns, true);
-            dumpSimpleHistoryManagerState("after filling history stack");
-
-            InspectorTest.addResult("First rollback result: " + historyManager._historyManager.rollback());
-            dumpSimpleHistoryManagerState("after first rollback");
-            dumpSelection(editor, "Rolled back");
-            shouldLogSimpleHistoryManager = false;
-
-            for (var i = 0; i < jumpsAmount - 1; ++i) {
+            clickAndDump(editor, lines, columns);
+            for (var i = 0; i < jumpsAmount; ++i) {
                 rollback();
                 dumpSelection(editor, "Rolled back");
             }

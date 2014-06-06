@@ -49,6 +49,8 @@ PASS oldChildWindow.navigator.battery.onchargingchange is newChildWindow.navigat
 PASS oldChildWindow.navigator.battery.onchargingtimechange is newChildWindow.navigator.battery.onchargingtimechange
 PASS oldChildWindow.navigator.battery.ondischargingtimechange is newChildWindow.navigator.battery.ondischargingtimechange
 PASS oldChildWindow.navigator.battery.onlevelchange is newChildWindow.navigator.battery.onlevelchange
+PASS oldChildWindow.navigator.connection.ontypechange is newChildWindow.navigator.connection.ontypechange
+PASS oldChildWindow.navigator.connection.type is newChildWindow.navigator.connection.type
 PASS oldChildWindow.navigator.cookieEnabled is newChildWindow.navigator.cookieEnabled
 PASS oldChildWindow.navigator.doNotTrack is newChildWindow.navigator.doNotTrack
 PASS oldChildWindow.navigator.language is newChildWindow.navigator.language
@@ -57,7 +59,8 @@ PASS oldChildWindow.navigator.onLine is newChildWindow.navigator.onLine
 PASS oldChildWindow.navigator.platform is newChildWindow.navigator.platform
 PASS oldChildWindow.navigator.product is newChildWindow.navigator.product
 PASS oldChildWindow.navigator.productSub is newChildWindow.navigator.productSub
-PASS oldChildWindow.navigator.serviceWorker.current is newChildWindow.navigator.serviceWorker.current
+PASS oldChildWindow.navigator.serviceWorker.controller is newChildWindow.navigator.serviceWorker.controller
+PASS oldChildWindow.navigator.serviceWorker.waiting is newChildWindow.navigator.serviceWorker.waiting
 PASS oldChildWindow.navigator.userAgent is newChildWindow.navigator.userAgent
 PASS oldChildWindow.navigator.vendor is newChildWindow.navigator.vendor
 PASS oldChildWindow.navigator.vendorSub is newChildWindow.navigator.vendorSub
@@ -99,6 +102,7 @@ PASS oldChildWindow.oninvalid is newChildWindow.oninvalid
 PASS oldChildWindow.onkeydown is newChildWindow.onkeydown
 PASS oldChildWindow.onkeypress is newChildWindow.onkeypress
 PASS oldChildWindow.onkeyup is newChildWindow.onkeyup
+PASS oldChildWindow.onlanguagechange is newChildWindow.onlanguagechange
 PASS oldChildWindow.onload is newChildWindow.onload
 PASS oldChildWindow.onloadeddata is newChildWindow.onloadeddata
 PASS oldChildWindow.onloadedmetadata is newChildWindow.onloadedmetadata

@@ -87,7 +87,7 @@ public:
 
     SMILTime elapsed() const;
 
-    SMILTime intervalBegin() const { return m_intervalBegin; }
+    SMILTime intervalBegin() const { return m_interval.begin; }
     SMILTime previousIntervalBegin() const { return m_previousIntervalBegin; }
     SMILTime simpleDuration() const;
 
@@ -147,9 +147,15 @@ private:
     };
 
     SMILTime findInstanceTime(BeginOrEnd, SMILTime minimumTime, bool equalsMinimumOK) const;
+
+    enum ResolveInterval {
+        FirstInterval,
+        NextInterval
+    };
+
+    SMILInterval resolveInterval(ResolveInterval) const;
     void resolveFirstInterval();
     bool resolveNextInterval();
-    void resolveInterval(bool first, SMILTime& beginResult, SMILTime& endResult) const;
     SMILTime resolveActiveEnd(SMILTime resolvedBegin, SMILTime resolvedEnd) const;
     SMILTime repeatingDuration() const;
 
@@ -186,8 +192,8 @@ private:
         String name() const { return m_name; }
         SMILTime offset() const { return m_offset; }
         int repeat() const { return m_repeat; }
-        Element* syncBase() const { return m_syncBase.get(); }
-        void setSyncBase(Element* element) { m_syncBase = element; }
+        SVGSMILElement* syncBase() const { return m_syncBase.get(); }
+        void setSyncBase(SVGSMILElement* element) { m_syncBase = element; }
         ConditionEventListener* eventListener() const { return m_eventListener.get(); }
         void setEventListener(PassRefPtr<ConditionEventListener>);
 
@@ -198,7 +204,7 @@ private:
         String m_name;
         SMILTime m_offset;
         int m_repeat;
-        RefPtrWillBeMember<Element> m_syncBase;
+        RefPtrWillBeMember<SVGSMILElement> m_syncBase;
         RefPtr<ConditionEventListener> m_eventListener;
     };
     bool parseCondition(const String&, BeginOrEnd beginOrEnd);
@@ -244,8 +250,7 @@ private:
     Vector<SMILTimeWithOrigin> m_endTimes;
 
     // This is the upcoming or current interval
-    SMILTime m_intervalBegin;
-    SMILTime m_intervalEnd;
+    SMILInterval m_interval;
 
     SMILTime m_previousIntervalBegin;
 

@@ -176,14 +176,17 @@ void HTMLImageElement::resetFormOwner()
     }
 }
 
+void HTMLImageElement::updateCurrentSrc()
+{
+    m_currentSrc = AtomicString(document().completeURL(imageSourceURL()).string());
+}
+
 void HTMLImageElement::setBestFitURLAndDPRFromImageCandidate(const ImageCandidate& candidate)
 {
     m_bestFitImageURL = candidate.url();
-    m_currentSrc = AtomicString(document().completeURL(imageSourceURL()).string());
-    float candidateScaleFactor = candidate.scaleFactor();
-    // FIXME: Make this ">0" part match the spec, once it settles.
-    if (candidateScaleFactor > 0)
-        m_imageDevicePixelRatio = 1 / candidateScaleFactor;
+    float candidateDensity = candidate.density();
+    if (candidateDensity >= 0)
+        m_imageDevicePixelRatio = 1.0 / candidateDensity;
     if (renderer() && renderer()->isImage())
         toRenderImage(renderer())->setImageDevicePixelRatio(m_imageDevicePixelRatio);
 }

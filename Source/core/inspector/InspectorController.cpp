@@ -277,12 +277,6 @@ void InspectorController::setLayerTreeId(int id)
     m_tracingAgent->setLayerTreeId(id);
 }
 
-void InspectorController::webViewResized(const IntSize& size)
-{
-    if (InspectorPageAgent* pageAgent = m_instrumentingAgents->inspectorPageAgent())
-        pageAgent->webViewResized(size);
-}
-
 bool InspectorController::isUnderTest()
 {
     return m_isUnderTest;
@@ -311,7 +305,7 @@ void InspectorController::inspect(Node* node)
     if (!frame)
         return;
 
-    if (node->nodeType() != Node::ELEMENT_NODE && node->nodeType() != Node::DOCUMENT_NODE)
+    if (!node->isElementNode() && !node->isDocumentNode())
         node = node->parentNode();
 
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(ScriptState::forMainWorld(frame));

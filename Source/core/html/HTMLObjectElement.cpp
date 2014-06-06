@@ -188,13 +188,13 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
 
     // Turn the attributes of the <object> element into arrays, but don't override <param> values.
     if (hasAttributes()) {
-        unsigned attributeCount = this->attributeCount();
-        for (unsigned i = 0; i < attributeCount; ++i) {
-            const Attribute& attribute = attributeItem(i);
-            const AtomicString& name = attribute.name().localName();
+        AttributeIteratorAccessor attributes = attributesIterator();
+        AttributeConstIterator end = attributes.end();
+        for (AttributeConstIterator it = attributes.begin(); it != end; ++it) {
+            const AtomicString& name = it->name().localName();
             if (!uniqueParamNames.contains(name.impl())) {
                 paramNames.append(name.string());
-                paramValues.append(attribute.value().string());
+                paramValues.append(it->value().string());
             }
         }
     }
@@ -326,9 +326,6 @@ void HTMLObjectElement::updateWidgetInternal()
         return;
     }
 
-    bool fallbackContent = hasFallbackContent();
-    renderEmbeddedObject()->setHasFallbackContent(fallbackContent);
-
     // FIXME: Is it possible to get here without a renderer now that we don't have beforeload events?
     if (!renderer())
         return;
@@ -336,7 +333,7 @@ void HTMLObjectElement::updateWidgetInternal()
     if (!hasValidClassId() || !requestObject(url, serviceType, paramNames, paramValues)) {
         if (!url.isEmpty())
             dispatchErrorEvent();
-        if (fallbackContent)
+        if (hasFallbackContent())
             renderFallbackContent();
     }
 }

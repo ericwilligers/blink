@@ -47,6 +47,7 @@
 #include "core/dom/Element.h"
 #include "core/dom/ExceptionCode.h"
 #include "core/dom/ExecutionContext.h"
+#include "core/dom/NoEventDispatchAssertion.h"
 #include "core/dom/RequestAnimationFrameCallback.h"
 #include "core/editing/Editor.h"
 #include "core/events/DOMWindowEventQueue.h"
@@ -363,6 +364,14 @@ void DOMWindow::clearEventQueue()
     m_eventQueue.clear();
 }
 
+void DOMWindow::acceptLanguagesChanged()
+{
+    if (m_navigator)
+        m_navigator->setLanguagesChanged();
+
+    dispatchEvent(Event::create(EventTypeNames::languagechange));
+}
+
 PassRefPtrWillBeRawPtr<Document> DOMWindow::createDocument(const String& mimeType, const DocumentInit& init, bool forceXHTML)
 {
     RefPtrWillBeRawPtr<Document> document = nullptr;
@@ -407,7 +416,6 @@ PassRefPtrWillBeRawPtr<Document> DOMWindow::installNewDocument(const String& mim
     m_frame->selection().updateSecureKeyboardEntryIfActive();
 
     if (m_frame->isMainFrame()) {
-        m_frame->notifyChromeClientWheelEventHandlerCountChanged();
         if (m_document->hasTouchEventHandlers())
             m_frame->host()->chrome().client().needTouchEvents(true);
     }
@@ -433,7 +441,7 @@ void DOMWindow::enqueueDocumentEvent(PassRefPtrWillBeRawPtr<Event> event)
 {
     if (!m_eventQueue)
         return;
-    event->setTarget(m_document);
+    event->setTarget(m_document.get());
     m_eventQueue->enqueueEvent(event);
 }
 
@@ -454,6 +462,8 @@ void DOMWindow::documentWasClosed()
 void DOMWindow::enqueuePageshowEvent(PageshowEventPersistence persisted)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=36334 Pageshow event needs to fire asynchronously.
+    // As per spec pageshow must be triggered asynchronously.
+    // However to be compatible with other browsers blink fires pageshow synchronously.
     dispatchEvent(PageTransitionEvent::create(EventTypeNames::pageshow, persisted), m_document.get());
 }
 
@@ -907,7 +917,9 @@ Element* DOMWindow::frameElement() const
     if (!m_frame)
         return 0;
 
-    return m_frame->ownerElement();
+    // The bindings security check should ensure we're same origin...
+    ASSERT(!m_frame->owner() || m_frame->owner()->isLocal());
+    return m_frame->deprecatedLocalOwner();
 }
 
 void DOMWindow::focus(ExecutionContext* context)
@@ -956,7 +968,7 @@ void DOMWindow::close(ExecutionContext* context)
         if (!activeDocument)
             return;
 
-        if (!activeDocument->canNavigate(m_frame))
+        if (!activeDocument->canNavigate(*m_frame))
             return;
     }
 
@@ -1587,20 +1599,20 @@ void DOMWindow::dispatchLoadEvent()
     // For load events, send a separate load event to the enclosing frame only.
     // This is a DOM extension and is independent of bubbling/capturing rules of
     // the DOM.
-    Element* ownerElement = m_frame ? m_frame->ownerElement() : 0;
-    if (ownerElement)
-        ownerElement->dispatchEvent(Event::create(EventTypeNames::load));
+    FrameOwner* owner = m_frame ? m_frame->owner() : 0;
+    if (owner)
+        owner->dispatchLoad();
 
     TRACE_EVENT_INSTANT1(TRACE_DISABLED_BY_DEFAULT("devtools.timeline"), "MarkLoad", "data", InspectorMarkLoadEvent::data(frame()));
     // FIXME(361045): remove InspectorInstrumentation calls once DevTools Timeline migrates to tracing.
     InspectorInstrumentation::loadEventFired(frame());
 }
 
-bool DOMWindow::dispatchEvent(PassRefPtrWillBeRawPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget)
+bool DOMWindow::dispatchEvent(PassRefPtrWillBeRawPtr<Event> prpEvent, PassRefPtrWillBeRawPtr<EventTarget> prpTarget)
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
 
-    RefPtr<EventTarget> protect = this;
+    RefPtrWillBeRawPtr<EventTarget> protect(this);
     RefPtrWillBeRawPtr<Event> event = prpEvent;
 
     event->setTarget(prpTarget ? prpTarget : this);
@@ -1658,7 +1670,8 @@ void DOMWindow::setLocation(const String& urlString, DOMWindow* callingWindow, D
     if (!activeDocument)
         return;
 
-    if (!activeDocument->canNavigate(m_frame))
+    ASSERT(m_frame);
+    if (!activeDocument->canNavigate(*m_frame))
         return;
 
     LocalFrame* firstFrame = enteredWindow->frame();
@@ -1810,7 +1823,7 @@ PassRefPtrWillBeRawPtr<DOMWindow> DOMWindow::open(const String& urlString, const
             targetFrame = m_frame;
     }
     if (targetFrame) {
-        if (!activeDocument->canNavigate(targetFrame))
+        if (!activeDocument->canNavigate(*targetFrame))
             return nullptr;
 
         KURL completedURL = firstFrame->document()->completeURL(urlString);

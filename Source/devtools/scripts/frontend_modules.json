@@ -8,6 +8,7 @@
             "common/CompletionDictionary.js",
             "common/DOMExtension.js",
             "common/Geometry.js",
+            "common/MessageSink.js",
             "common/ModuleManager.js",
             "common/Object.js",
             "common/ParsedURL.js",
@@ -317,6 +318,7 @@
             "timeline/TimelinePowerGraph.js",
             "timeline/TimelinePowerOverview.js",
             "timeline/TimelineModel.js",
+            "timeline/TimelineModelImpl.js",
             "timeline/TimelineOverviewPane.js",
             "timeline/TimelineFlameChart.js",
             "timeline/TimelinePanel.js",
@@ -324,9 +326,10 @@
             "timeline/TimelineUIUtils.js",
             "timeline/TimelineView.js",
             "timeline/TimelineTracingView.js",
-            "timeline/TimelineTraceEventBindings.js",
             "timeline/TimelineLayersView.js",
             "timeline/TracingModel.js",
+            "timeline/TracingTimelineModel.js",
+            "timeline/TracingTimelineUIUtils.js",
             "timeline/TransformController.js"
         ]
     },
@@ -370,8 +373,8 @@
         "name": "settings",
         "dependencies": ["components"],
         "sources": [
-            "SettingsScreen.js",
-            "EditFileSystemDialog.js"
+            "settings/SettingsScreen.js",
+            "settings/EditFileSystemDialog.js"
         ]
     },
     {
@@ -465,7 +468,11 @@
             "sdk"
         ],
         "sources": [
+            "main/AdvancedApp.js",
+            "main/App.js",
             "main/HelpScreenUntilReload.js",
+            "main/ScreencastApp.js",
+            "main/SimpleApp.js",
             "main/Main.js"
         ]
     },

@@ -37,6 +37,7 @@
 #include "public/platform/WebIDBDatabase.h"
 #include "wtf/PassOwnPtr.h"
 #include <gtest/gtest.h>
+#include <v8.h>
 
 using blink::WebBlobInfo;
 using namespace WebCore;
@@ -74,17 +75,24 @@ NullExecutionContext::NullExecutionContext()
 class IDBRequestTest : public testing::Test {
 public:
     IDBRequestTest()
-        : m_scope(V8TestingScope::create(v8::Isolate::GetCurrent()))
+        : m_scope(v8::Isolate::GetCurrent())
+        , m_executionContext(adoptRef(new NullExecutionContext()))
     {
-        m_scope->scriptState()->setExecutionContext(adoptRef(new NullExecutionContext()));
+        m_scope.scriptState()->setExecutionContext(m_executionContext.get());
     }
 
-    v8::Isolate* isolate() const { return m_scope->isolate(); }
-    ScriptState* scriptState() const { return m_scope->scriptState(); }
-    ExecutionContext* executionContext() const { return m_scope->scriptState()->executionContext(); }
+    ~IDBRequestTest()
+    {
+        m_scope.scriptState()->setExecutionContext(0);
+    }
+
+    v8::Isolate* isolate() const { return m_scope.isolate(); }
+    ScriptState* scriptState() const { return m_scope.scriptState(); }
+    ExecutionContext* executionContext() const { return m_scope.scriptState()->executionContext(); }
 
 private:
-    OwnPtr<V8TestingScope> m_scope;
+    V8TestingScope m_scope;
+    RefPtr<ExecutionContext> m_executionContext;
 };
 
 TEST_F(IDBRequestTest, EventsAfterStopping)

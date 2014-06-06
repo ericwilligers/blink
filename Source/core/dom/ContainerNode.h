@@ -27,7 +27,6 @@
 #include "bindings/v8/ExceptionStatePlaceholder.h"
 #include "core/dom/Node.h"
 #include "wtf/OwnPtr.h"
-#include "wtf/TemporaryChange.h"
 #include "wtf/Vector.h"
 
 namespace WebCore {
@@ -41,68 +40,11 @@ namespace Private {
     void addChildNodesToDeletionQueue(GenericNode*& head, GenericNode*& tail, GenericNodeContainer&);
 }
 
-#ifndef NDEBUG
-// FIXME: Move this class to its own file.
-class NoEventDispatchAssertion {
-public:
-    NoEventDispatchAssertion()
-    {
-        if (!isMainThread())
-            return;
-        s_count++;
-    }
-
-    ~NoEventDispatchAssertion()
-    {
-        if (!isMainThread())
-            return;
-        ASSERT(s_count);
-        s_count--;
-    }
-
-    static bool isEventDispatchForbidden()
-    {
-        if (!isMainThread())
-            return false;
-        return s_count;
-    }
-
-    // It's safe to dispatch events in SVGImage since there can't be any script
-    // listeners.
-    class AllowSVGImageEvents {
-    public:
-        AllowSVGImageEvents()
-            : m_change(s_count, 0)
-        {
-        }
-
-        ~AllowSVGImageEvents()
-        {
-            ASSERT(!s_count);
-        }
-
-        TemporaryChange<unsigned> m_change;
-    };
-
-private:
-    static unsigned s_count;
-};
-#else
-class NoEventDispatchAssertion {
-public:
-    NoEventDispatchAssertion() { }
-    class AllowSVGImageEvents {
-    public:
-        AllowSVGImageEvents() { }
-    };
-};
-#endif
-
 enum DynamicRestyleFlags {
-    ChildrenAffectedByFocus = 1 << 0,
-    ChildrenAffectedByHover = 1 << 1,
-    ChildrenAffectedByActive = 1 << 2,
-    ChildrenAffectedByDrag = 1 << 3,
+    ChildrenOrSiblingsAffectedByFocus = 1 << 0,
+    ChildrenOrSiblingsAffectedByHover = 1 << 1,
+    ChildrenOrSiblingsAffectedByActive = 1 << 2,
+    ChildrenOrSiblingsAffectedByDrag = 1 << 3,
     ChildrenAffectedByFirstChildRules = 1 << 4,
     ChildrenAffectedByLastChildRules = 1 << 5,
     ChildrenAffectedByDirectAdjacentRules = 1 << 6,
@@ -117,7 +59,7 @@ enum DynamicRestyleFlags {
 // for a Node Vector that is used to store child Nodes of a given Node.
 // FIXME: Optimize the value.
 const int initialNodeVectorSize = 11;
-typedef Vector<RefPtr<Node>, initialNodeVectorSize> NodeVector;
+typedef WillBeHeapVector<RefPtrWillBeMember<Node>, initialNodeVectorSize> NodeVector;
 
 class ContainerNode : public Node {
 public:
@@ -139,10 +81,10 @@ public:
     PassRefPtrWillBeRawPtr<Element> querySelector(const AtomicString& selectors, ExceptionState&);
     PassRefPtrWillBeRawPtr<NodeList> querySelectorAll(const AtomicString& selectors, ExceptionState&);
 
-    void insertBefore(PassRefPtr<Node> newChild, Node* refChild, ExceptionState& = ASSERT_NO_EXCEPTION);
-    void replaceChild(PassRefPtr<Node> newChild, Node* oldChild, ExceptionState& = ASSERT_NO_EXCEPTION);
+    void insertBefore(PassRefPtrWillBeRawPtr<Node> newChild, Node* refChild, ExceptionState& = ASSERT_NO_EXCEPTION);
+    void replaceChild(PassRefPtrWillBeRawPtr<Node> newChild, Node* oldChild, ExceptionState& = ASSERT_NO_EXCEPTION);
     void removeChild(Node* child, ExceptionState& = ASSERT_NO_EXCEPTION);
-    void appendChild(PassRefPtr<Node> newChild, ExceptionState& = ASSERT_NO_EXCEPTION);
+    void appendChild(PassRefPtrWillBeRawPtr<Node> newChild, ExceptionState& = ASSERT_NO_EXCEPTION);
 
     Element* getElementById(const AtomicString& id) const;
     PassRefPtrWillBeRawPtr<HTMLCollection> getElementsByTagName(const AtomicString&);
@@ -153,9 +95,9 @@ public:
 
     // These methods are only used during parsing.
     // They don't send DOM mutation events or handle reparenting.
-    void parserAppendChild(PassRefPtr<Node>);
+    void parserAppendChild(PassRefPtrWillBeRawPtr<Node>);
     void parserRemoveChild(Node&);
-    void parserInsertBefore(PassRefPtr<Node> newChild, Node& refChild);
+    void parserInsertBefore(PassRefPtrWillBeRawPtr<Node> newChild, Node& refChild);
     void parserTakeAllChildrenFrom(ContainerNode&);
 
     void removeChildren();
@@ -170,17 +112,17 @@ public:
     virtual void setActive(bool = true) OVERRIDE;
     virtual void setHovered(bool = true) OVERRIDE;
 
-    bool childrenAffectedByFocus() const { return hasRestyleFlag(ChildrenAffectedByFocus); }
-    void setChildrenAffectedByFocus() { setRestyleFlag(ChildrenAffectedByFocus); }
+    bool childrenOrSiblingsAffectedByFocus() const { return hasRestyleFlag(ChildrenOrSiblingsAffectedByFocus); }
+    void setChildrenOrSiblingsAffectedByFocus() { setRestyleFlag(ChildrenOrSiblingsAffectedByFocus); }
 
-    bool childrenAffectedByHover() const { return hasRestyleFlag(ChildrenAffectedByHover); }
-    void setChildrenAffectedByHover() { setRestyleFlag(ChildrenAffectedByHover); }
+    bool childrenOrSiblingsAffectedByHover() const { return hasRestyleFlag(ChildrenOrSiblingsAffectedByHover); }
+    void setChildrenOrSiblingsAffectedByHover() { setRestyleFlag(ChildrenOrSiblingsAffectedByHover); }
 
-    bool childrenAffectedByActive() const { return hasRestyleFlag(ChildrenAffectedByActive); }
-    void setChildrenAffectedByActive() { setRestyleFlag(ChildrenAffectedByActive); }
+    bool childrenOrSiblingsAffectedByActive() const { return hasRestyleFlag(ChildrenOrSiblingsAffectedByActive); }
+    void setChildrenOrSiblingsAffectedByActive() { setRestyleFlag(ChildrenOrSiblingsAffectedByActive); }
 
-    bool childrenAffectedByDrag() const { return hasRestyleFlag(ChildrenAffectedByDrag); }
-    void setChildrenAffectedByDrag() { setRestyleFlag(ChildrenAffectedByDrag); }
+    bool childrenOrSiblingsAffectedByDrag() const { return hasRestyleFlag(ChildrenOrSiblingsAffectedByDrag); }
+    void setChildrenOrSiblingsAffectedByDrag() { setRestyleFlag(ChildrenOrSiblingsAffectedByDrag); }
 
     bool childrenAffectedByPositionalRules() const { return hasRestyleFlag(ChildrenAffectedByForwardPositionalRules) || hasRestyleFlag(ChildrenAffectedByBackwardPositionalRules); }
 

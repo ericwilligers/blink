@@ -13,8 +13,8 @@
 #include "core/animation/AnimationTimeline.h"
 #include "core/animation/KeyframeEffectModel.h"
 #include "core/animation/Timing.h"
-
 #include <gtest/gtest.h>
+#include <v8.h>
 
 namespace WebCore {
 
@@ -28,7 +28,7 @@ protected:
         EXPECT_EQ(0, document->timeline().currentTime());
     }
 
-    RefPtr<Document> document;
+    RefPtrWillBePersistent<Document> document;
     RefPtrWillBePersistent<Element> element;
     TrackExceptionState exceptionState;
 };
@@ -37,7 +37,7 @@ class AnimationAnimationV8Test : public AnimationAnimationTest {
 protected:
     AnimationAnimationV8Test()
         : m_isolate(v8::Isolate::GetCurrent())
-        , m_scope(V8TestingScope::create(m_isolate))
+        , m_scope(m_isolate)
     {
     }
 
@@ -54,7 +54,7 @@ protected:
     v8::Isolate* m_isolate;
 
 private:
-    OwnPtr<V8TestingScope> m_scope;
+    V8TestingScope m_scope;
 };
 
 TEST_F(AnimationAnimationV8Test, CanCreateAnAnimation)

@@ -42,7 +42,7 @@ WebInspector.CSSStyleModel = function(target)
     this._styleLoader = new WebInspector.CSSStyleModel.ComputedStyleLoader(this);
     this._domModel.addEventListener(WebInspector.DOMModel.Events.UndoRedoRequested, this._undoRedoRequested, this);
     this._domModel.addEventListener(WebInspector.DOMModel.Events.UndoRedoCompleted, this._undoRedoCompleted, this);
-    target.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameCreatedOrNavigated, this._mainFrameCreatedOrNavigated, this);
+    target.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._mainFrameNavigated, this);
     target.registerCSSDispatcher(new WebInspector.CSSDispatcher(this));
     this._agent.enable(this._wasEnabled.bind(this));
     this._resetStyleSheets();
@@ -541,7 +541,7 @@ WebInspector.CSSStyleModel.prototype = {
         this._pendingCommandsMajorState.pop();
     },
 
-    _mainFrameCreatedOrNavigated: function()
+    _mainFrameNavigated: function()
     {
         this._resetStyleSheets();
     },
@@ -689,6 +689,7 @@ WebInspector.CSSStyleModel.LiveLocation.prototype = {
 /**
  * @constructor
  * @implements {WebInspector.RawLocation}
+ * @param {!WebInspector.Target} target
  * @param {string} url
  * @param {number} lineNumber
  * @param {number=} columnNumber
@@ -1583,7 +1584,7 @@ WebInspector.CSSStyleSheetHeader.prototype = {
         function textCallback(error, text)
         {
             if (error) {
-                WebInspector.console.log("Failed to get text for stylesheet " + this.id + ": " + error);
+                WebInspector.messageSink.addErrorMessage("Failed to get text for stylesheet " + this.id + ": " + error);
                 text = "";
                 // Fall through.
             }

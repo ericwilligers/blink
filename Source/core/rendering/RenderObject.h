@@ -525,8 +525,11 @@ public:
     };
     bool hasBoxDecorations() const { return m_bitfields.boxDecorationState() != NoBoxDecorations; }
     bool backgroundIsKnownToBeObscured();
-    bool borderImageIsLoadedAndCanBeRendered() const;
-    bool mustRepaintBackgroundOrBorder() const;
+    bool canRenderBorderImage() const;
+    bool mustRepaintBackgroundOrBorderOnWidthChange() const;
+    bool mustRepaintBackgroundOrBorderOnHeightChange() const;
+    bool mustRepaintFillLayersOnWidthChange(const FillLayer&) const;
+    bool mustRepaintFillLayersOnHeightChange(const FillLayer&) const;
     bool hasBackground() const { return style()->hasBackground(); }
     bool hasEntirelyFixedBackground() const;
 
@@ -806,9 +809,16 @@ public:
     const RenderLayerModelObject* adjustCompositedContainerForSpecialAncestors(const RenderLayerModelObject* repaintContainer) const;
     bool isRepaintContainer() const;
 
-    // Returns the repaint rect for this RenderObject in the coordinate space of the composited layer that this RenderObject paints into, or the RenderView if not
-    // composited.
-    LayoutRect computeRepaintRect() const;
+    LayoutRect computeRepaintRect()
+    {
+        return computeRepaintRect(containerForRepaint());
+    }
+
+    // Returns the repaint rect for this RenderObject in the coordinate space of the paint backing (typically a GraphicsLayer) for |repaintContainer|.
+    LayoutRect computeRepaintRect(const RenderLayerModelObject* repaintContainer) const;
+
+    // Returns the rect bounds needed to repaint this object, in the coordinate space of the rendering backing of |repaintContainer|
+    LayoutRect boundsRectForRepaint(const RenderLayerModelObject* repaintContainer) const;
 
     // Actually do the repaint of rect r for this object which has been computed in the coordinate space
     // of repaintContainer. If repaintContainer is 0, repaint via the view.
@@ -825,8 +835,8 @@ public:
     bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, bool wasSelfLayout,
         const LayoutRect& oldBounds, const LayoutPoint& oldPositionFromRepaintContainer, const LayoutRect* newBoundsPtr = 0, const LayoutPoint* newPositionFromRepaintContainer = 0);
 
-    // Walk the tree after layout repainting renderers that have changed or moved, updating bounds that have changed, and clearing repaint state.
-    virtual void repaintTreeAfterLayout(const RenderLayerModelObject& repaintContainer);
+    // Walk the tree after layout issuing paint invalidations for renderers that have changed or moved, updating bounds that have changed, and clearing paint invalidation state.
+    virtual void invalidateTreeAfterLayout(const RenderLayerModelObject&);
 
     virtual void repaintOverflow();
     void repaintOverflowIfNeeded();
@@ -846,7 +856,7 @@ public:
 
     // Given a rect in the object's coordinate space, compute a rect suitable for repainting
     // that rect in the coordinate space of repaintContainer.
-    virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const;
+    virtual void mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const;
     virtual void computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed = false) const;
 
     // Return the offset to the column in which the specified point (in flow-thread coordinates)
@@ -976,48 +986,42 @@ public:
 
     bool isRelayoutBoundaryForInspector() const;
 
-    const LayoutRect& previousRepaintRect() const { return m_previousRepaintRect; }
-    void setPreviousRepaintRect(const LayoutRect& rect) { m_previousRepaintRect = rect; }
+    const LayoutRect& previousPaintInvalidationRect() const { return m_previousPaintInvalidationRect; }
+    void setPreviousPaintInvalidationRect(const LayoutRect& rect) { m_previousPaintInvalidationRect = rect; }
 
-    const LayoutPoint& previousPositionFromRepaintContainer() const { return m_previousPositionFromRepaintContainer; }
-    void setPreviousPositionFromRepaintContainer(const LayoutPoint& location) { m_previousPositionFromRepaintContainer = location; }
+    const LayoutPoint& previousPositionFromPaintInvalidationContainer() const { return m_previousPositionFromPaintInvalidationContainer; }
+    void setPreviousPositionFromPaintInvalidationContainer(const LayoutPoint& location) { m_previousPositionFromPaintInvalidationContainer = location; }
 
-    LayoutRect newOutlineRect();
-    void setNewOutlineRect(const LayoutRect&);
+    bool shouldDoFullPaintInvalidationAfterLayout() const { return m_bitfields.shouldDoFullPaintInvalidationAfterLayout(); }
+    void setShouldDoFullPaintInvalidationAfterLayout(bool b) { m_bitfields.setShouldDoFullPaintInvalidationAfterLayout(b); }
+    bool shouldInvalidateOverflowForPaint() const { return m_bitfields.shouldInvalidateOverflowForPaint(); }
 
-    LayoutRect oldOutlineRect();
-    void setOldOutlineRect(const LayoutRect&);
-
-    bool shouldDoFullRepaintAfterLayout() const { return m_bitfields.shouldDoFullRepaintAfterLayout(); }
-    void setShouldDoFullRepaintAfterLayout(bool b) { m_bitfields.setShouldDoFullRepaintAfterLayout(b); }
-    bool shouldRepaintOverflow() const { return m_bitfields.shouldRepaintOverflow(); }
-
-    bool shouldDoFullRepaintIfSelfPaintingLayer() const { return m_bitfields.shouldDoFullRepaintIfSelfPaintingLayer(); }
-    void setShouldDoFullRepaintIfSelfPaintingLayer(bool b) { m_bitfields.setShouldDoFullRepaintIfSelfPaintingLayer(b); }
+    bool shouldDoFullPaintInvalidationIfSelfPaintingLayer() const { return m_bitfields.shouldDoFullPaintInvalidationIfSelfPaintingLayer(); }
+    void setShouldDoFullPaintInvalidationIfSelfPaintingLayer(bool b) { m_bitfields.setShouldDoFullPaintInvalidationIfSelfPaintingLayer(b); }
 
     bool onlyNeededPositionedMovementLayout() const { return m_bitfields.onlyNeededPositionedMovementLayout(); }
     void setOnlyNeededPositionedMovementLayout(bool b) { m_bitfields.setOnlyNeededPositionedMovementLayout(b); }
 
-    void clearRepaintState();
+    void clearPaintInvalidationState();
 
     // layoutDidGetCalled indicates whether this render object was re-laid-out
     // since the last call to setLayoutDidGetCalled(false) on this object.
     bool layoutDidGetCalled() { return m_bitfields.layoutDidGetCalled(); }
     void setLayoutDidGetCalled(bool b) { m_bitfields.setLayoutDidGetCalled(b); }
 
-    bool mayNeedInvalidation() { return m_bitfields.mayNeedInvalidation(); }
-    void setMayNeedInvalidation(bool b)
+    bool mayNeedPaintInvalidation() { return m_bitfields.mayNeedPaintInvalidation(); }
+    void setMayNeedPaintInvalidation(bool b)
     {
-        m_bitfields.setMayNeedInvalidation(b);
+        m_bitfields.setMayNeedPaintInvalidation(b);
 
         // Make sure our parent is marked as needing invalidation.
-        if (b && parent() && !parent()->mayNeedInvalidation())
-            parent()->setMayNeedInvalidation(b);
+        if (b && parent() && !parent()->mayNeedPaintInvalidation())
+            parent()->setMayNeedPaintInvalidation(b);
     }
 
-    bool shouldCheckForInvalidationAfterLayout()
+    bool shouldCheckForPaintInvalidationAfterLayout()
     {
-        return layoutDidGetCalled() || mayNeedInvalidation();
+        return layoutDidGetCalled() || mayNeedPaintInvalidation();
     }
 
     bool shouldDisableLayoutState() const { return hasColumns() || hasTransform() || hasReflection() || style()->isFlippedBlocksWritingMode(); }
@@ -1050,6 +1054,7 @@ protected:
     void paintFocusRing(PaintInfo&, const LayoutPoint&, RenderStyle*);
     void paintOutline(PaintInfo&, const LayoutRect&);
     void addPDFURLRect(GraphicsContext*, const LayoutRect&);
+    void addChildFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer);
 
     virtual LayoutRect viewRect() const;
 
@@ -1077,8 +1082,6 @@ protected:
     virtual void computeSelfHitTestRects(Vector<LayoutRect>&, const LayoutPoint& layerOffset) const { };
 
 private:
-    LayoutRect computeRepaintRectInternal(const RenderLayerModelObject* repaintContainer) const;
-
     RenderBlock* containerForFixedPosition(const RenderLayerModelObject* repaintContainer = 0, bool* repaintContainerSkipped = 0) const;
 
     RenderFlowThread* locateFlowThreadContainingBlock() const;
@@ -1132,16 +1135,16 @@ private:
     public:
         RenderObjectBitfields(Node* node)
             : m_selfNeedsLayout(false)
-            // FIXME: shouldDoFullRepaintAfterLayout is needed because we reset
-            // the layout bits before repaint when doing repaintAfterLayout.
-            // Holding the layout bits until after repaint would remove the need
+            // FIXME: shouldDoFullPaintInvalidationAfterLayout is needed because we reset
+            // the layout bits beforeissing paint invalidations when doing invalidateTreeAfterLayout.
+            // Holding the layout bits until after paint invalidation would remove the need
             // for this flag.
-            , m_shouldDoFullRepaintAfterLayout(false)
-            , m_shouldRepaintOverflow(false)
-            , m_shouldDoFullRepaintIfSelfPaintingLayer(false)
-            // FIXME: We should remove mayNeedInvalidation once we are able to
+            , m_shouldDoFullPaintInvalidationAfterLayout(false)
+            , m_shouldInvalidateOverflowForPaint(false)
+            , m_shouldDoFullPaintInvalidationIfSelfPaintingLayer(false)
+            // FIXME: We should remove mayNeedPaintInvalidation once we are able to
             // use the other layout flags to detect the same cases. crbug.com/370118
-            , m_mayNeedInvalidation(false)
+            , m_mayNeedPaintInvalidation(false)
             , m_onlyNeededPositionedMovementLayout(false)
             , m_needsPositionedMovementLayout(false)
             , m_normalChildNeedsLayout(false)
@@ -1178,10 +1181,10 @@ private:
 
         // 32 bits have been used in the first word, and 6 in the second.
         ADD_BOOLEAN_BITFIELD(selfNeedsLayout, SelfNeedsLayout);
-        ADD_BOOLEAN_BITFIELD(shouldDoFullRepaintAfterLayout, ShouldDoFullRepaintAfterLayout);
-        ADD_BOOLEAN_BITFIELD(shouldRepaintOverflow, ShouldRepaintOverflow);
-        ADD_BOOLEAN_BITFIELD(shouldDoFullRepaintIfSelfPaintingLayer, ShouldDoFullRepaintIfSelfPaintingLayer);
-        ADD_BOOLEAN_BITFIELD(mayNeedInvalidation, MayNeedInvalidation);
+        ADD_BOOLEAN_BITFIELD(shouldDoFullPaintInvalidationAfterLayout, ShouldDoFullPaintInvalidationAfterLayout);
+        ADD_BOOLEAN_BITFIELD(shouldInvalidateOverflowForPaint, ShouldInvalidateOverflowForPaint);
+        ADD_BOOLEAN_BITFIELD(shouldDoFullPaintInvalidationIfSelfPaintingLayer, ShouldDoFullPaintInvalidationIfSelfPaintingLayer);
+        ADD_BOOLEAN_BITFIELD(mayNeedPaintInvalidation, MayNeedPaintInvalidation);
         ADD_BOOLEAN_BITFIELD(onlyNeededPositionedMovementLayout, OnlyNeededPositionedMovementLayout);
         ADD_BOOLEAN_BITFIELD(needsPositionedMovementLayout, NeedsPositionedMovementLayout);
         ADD_BOOLEAN_BITFIELD(normalChildNeedsLayout, NormalChildNeedsLayout);
@@ -1258,7 +1261,7 @@ private:
     void setNeedsSimplifiedNormalFlowLayout(bool b) { m_bitfields.setNeedsSimplifiedNormalFlowLayout(b); }
     void setIsDragging(bool b) { m_bitfields.setIsDragging(b); }
     void setEverHadLayout(bool b) { m_bitfields.setEverHadLayout(b); }
-    void setShouldRepaintOverflow(bool b) { m_bitfields.setShouldRepaintOverflow(b); }
+    void setShouldInvalidateOverflowForPaint(bool b) { m_bitfields.setShouldInvalidateOverflowForPaint(b); }
     void setSelfNeedsOverflowRecalcAfterStyleChange(bool b) { m_bitfields.setSelfNeedsOverflowRecalcAfterStyleChange(b); }
     void setChildNeedsOverflowRecalcAfterStyleChange(bool b) { m_bitfields.setChildNeedsOverflowRecalcAfterStyleChange(b); }
 
@@ -1267,11 +1270,11 @@ private:
     static bool s_affectsParentBlock;
 
     // This stores the repaint rect from the previous layout.
-    LayoutRect m_previousRepaintRect;
+    LayoutRect m_previousPaintInvalidationRect;
 
     // This stores the position in the repaint container's coordinate.
     // It is used to detect renderer shifts that forces a full invalidation.
-    LayoutPoint m_previousPositionFromRepaintContainer;
+    LayoutPoint m_previousPositionFromPaintInvalidationContainer;
 };
 
 // FIXME: remove this once the render object lifecycle ASSERTS are no longer hit.
@@ -1286,13 +1289,8 @@ private:
     TemporaryChange<bool> m_disabler;
 };
 
-// Allow equality comparisons of RenderObject's by reference or pointer, interchangeably.
-inline bool operator==(const RenderObject& a, const RenderObject& b) { return &a == &b; }
-inline bool operator==(const RenderObject& a, const RenderObject* b) { return &a == b; }
-inline bool operator==(const RenderObject* a, const RenderObject& b) { return a == &b; }
-inline bool operator!=(const RenderObject& a, const RenderObject& b) { return !(a == b); }
-inline bool operator!=(const RenderObject& a, const RenderObject* b) { return !(a == b); }
-inline bool operator!=(const RenderObject* a, const RenderObject& b) { return !(a == b); }
+// Allow equality comparisons of RenderObjects by reference or pointer, interchangeably.
+DEFINE_COMPARISON_OPERATORS_WITH_REFERENCES(RenderObject)
 
 inline bool RenderObject::documentBeingDestroyed() const
 {
@@ -1340,7 +1338,7 @@ inline void RenderObject::setNeedsLayout(MarkingBehavior markParents, SubtreeLay
 inline void RenderObject::setNeedsLayoutAndFullRepaint(MarkingBehavior markParents, SubtreeLayoutScope* layouter)
 {
     setNeedsLayout(markParents, layouter);
-    setShouldDoFullRepaintAfterLayout(true);
+    setShouldDoFullPaintInvalidationAfterLayout(true);
 }
 
 inline void RenderObject::clearNeedsLayout()

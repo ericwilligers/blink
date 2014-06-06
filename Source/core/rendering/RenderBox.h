@@ -408,7 +408,7 @@ public:
     void deleteLineBoxWrapper();
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
-    virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
+    virtual void mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
     void repaintDuringLayoutIfMoved(const LayoutRect&);
     virtual void repaintOverhangingFloats(bool paintAllDescendants);
 
@@ -440,13 +440,13 @@ public:
 
     LayoutUnit shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStart, LayoutUnit childMarginEnd, const RenderBlockFlow* cb) const;
 
-    LayoutUnit computeLogicalWidthUsing(SizeType, Length logicalWidth, LayoutUnit availableLogicalWidth, const RenderBlock* containingBlock) const;
+    LayoutUnit computeLogicalWidthUsing(SizeType, const Length& logicalWidth, LayoutUnit availableLogicalWidth, const RenderBlock* containingBlock) const;
     LayoutUnit computeLogicalHeightUsing(const Length& height, LayoutUnit intrinsicContentHeight) const;
     LayoutUnit computeContentLogicalHeight(const Length& height, LayoutUnit intrinsicContentHeight) const;
     LayoutUnit computeContentAndScrollbarLogicalHeightUsing(const Length& height, LayoutUnit intrinsicContentHeight) const;
-    LayoutUnit computeReplacedLogicalWidthUsing(Length width) const;
+    LayoutUnit computeReplacedLogicalWidthUsing(const Length& width) const;
     LayoutUnit computeReplacedLogicalWidthRespectingMinMaxWidth(LayoutUnit logicalWidth, ShouldComputePreferred  = ComputeActual) const;
-    LayoutUnit computeReplacedLogicalHeightUsing(Length height) const;
+    LayoutUnit computeReplacedLogicalHeightUsing(const Length& height) const;
     LayoutUnit computeReplacedLogicalHeightRespectingMinMaxHeight(LayoutUnit logicalHeight) const;
 
     virtual LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const;
@@ -619,7 +619,7 @@ public:
             removeFloatingOrPositionedChildFromBlockLists();
     }
 
-    virtual void repaintTreeAfterLayout(const RenderLayerModelObject& repaintContainer) OVERRIDE;
+    virtual void invalidateTreeAfterLayout(const RenderLayerModelObject&) OVERRIDE;
 
 protected:
     virtual void willBeDestroyed() OVERRIDE;
@@ -647,8 +647,8 @@ protected:
 
     void computePositionedLogicalWidth(LogicalExtentComputedValues&) const;
 
-    LayoutUnit computeIntrinsicLogicalWidthUsing(Length logicalWidthLength, LayoutUnit availableLogicalWidth, LayoutUnit borderAndPadding) const;
-    LayoutUnit computeIntrinsicLogicalContentHeightUsing(Length logicalHeightLength, LayoutUnit intrinsicContentHeight, LayoutUnit borderAndPadding) const;
+    LayoutUnit computeIntrinsicLogicalWidthUsing(const Length& logicalWidthLength, LayoutUnit availableLogicalWidth, LayoutUnit borderAndPadding) const;
+    LayoutUnit computeIntrinsicLogicalContentHeightUsing(const Length& logicalHeightLength, LayoutUnit intrinsicContentHeight, LayoutUnit borderAndPadding) const;
 
     virtual bool shouldComputeSizeAsReplaced() const { return isReplaced() && !isInlineBlockOrInlineTable(); }
 
@@ -682,12 +682,12 @@ private:
     void computePositionedLogicalHeight(LogicalExtentComputedValues&) const;
     void computePositionedLogicalWidthUsing(Length logicalWidth, const RenderBoxModelObject* containerBlock, TextDirection containerDirection,
                                             LayoutUnit containerLogicalWidth, LayoutUnit bordersPlusPadding,
-                                            Length logicalLeft, Length logicalRight, Length marginLogicalLeft, Length marginLogicalRight,
-                                            LogicalExtentComputedValues&) const;
+                                            const Length& logicalLeft, const Length& logicalRight, const Length& marginLogicalLeft,
+                                            const Length& marginLogicalRight, LogicalExtentComputedValues&) const;
     void computePositionedLogicalHeightUsing(Length logicalHeightLength, const RenderBoxModelObject* containerBlock,
                                              LayoutUnit containerLogicalHeight, LayoutUnit bordersPlusPadding, LayoutUnit logicalHeight,
-                                             Length logicalTop, Length logicalBottom, Length marginLogicalTop, Length marginLogicalBottom,
-                                             LogicalExtentComputedValues&) const;
+                                             const Length& logicalTop, const Length& logicalBottom, const Length& marginLogicalTop,
+                                             const Length& marginLogicalBottom, LogicalExtentComputedValues&) const;
 
     void computePositionedLogicalHeightReplaced(LogicalExtentComputedValues&) const;
     void computePositionedLogicalWidthReplaced(LogicalExtentComputedValues&) const;

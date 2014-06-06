@@ -25,6 +25,7 @@
 
 #include "bindings/v8/SharedPersistent.h"
 #include "core/html/HTMLFrameOwnerElement.h"
+#include <v8.h>
 
 struct NPObject;
 
@@ -69,6 +70,7 @@ protected:
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
+    virtual bool hasFallbackContent() const;
     virtual bool useFallbackContent() const;
     // Create or update the RenderWidget and return it, triggering layout if
     // necessary.

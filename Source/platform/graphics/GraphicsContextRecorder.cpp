@@ -202,11 +202,6 @@ public:
         params->setObject("paint", objectForSkPaint(paint));
     }
 
-    void drawPicture(SkPicture& picture) OVERRIDE
-    {
-        addItemWithParams("drawPicture")->setObject("picture", objectForSkPicture(picture));
-    }
-
     void drawRect(const SkRect& rect, const SkPaint& paint) OVERRIDE
     {
         RefPtr<JSONObject> params = addItemWithParams("drawRect");
@@ -395,6 +390,11 @@ public:
     {
         RefPtr<JSONObject> params = addItemWithParams("clipRegion");
         params->setString("op", regionOpName(op));
+    }
+
+    void onDrawPicture(const SkPicture* picture) OVERRIDE
+    {
+        addItemWithParams("drawPicture")->setObject("picture", objectForSkPicture(*picture));
     }
 
     void didSetMatrix(const SkMatrix& matrix) OVERRIDE
@@ -713,9 +713,9 @@ private:
     PassRefPtr<JSONObject> objectForBitmapData(const SkBitmap& bitmap)
     {
         RefPtr<JSONObject> dataItem = JSONObject::create();
-        Vector<unsigned char>* output = 0;
-        WebCore::PNGImageEncoder::encode(bitmap, output);
-        dataItem->setString("base64", WTF::base64Encode((const char*)output->data(), output->size()));
+        Vector<unsigned char> output;
+        WebCore::PNGImageEncoder::encode(bitmap, &output);
+        dataItem->setString("base64", WTF::base64Encode(reinterpret_cast<char*>(output.data()), output.size()));
         dataItem->setString("mimeType", "image/png");
         return dataItem.release();
     }
@@ -978,8 +978,8 @@ private:
         case SkPaint::kGlyphID_TextEncoding: {
             WTF::Vector<SkUnichar> dataVector(byteLength / 2);
             SkUnichar* textData = dataVector.data();
-            paint.glyphsToUnichars((const uint16_t*)text, byteLength / 2, textData);
-            return WTF::UTF32LittleEndianEncoding().decode((const char*)textData, byteLength * 2);
+            paint.glyphsToUnichars(static_cast<const uint16_t*>(text), byteLength / 2, textData);
+            return WTF::UTF32LittleEndianEncoding().decode(reinterpret_cast<const char*>(textData), byteLength * 2);
         }
         default:
             ASSERT_NOT_REACHED();

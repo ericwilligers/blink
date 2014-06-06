@@ -21,30 +21,25 @@ public:
     explicit CompositingReasonFinder(RenderView&);
 
     CompositingReasons styleDeterminedReasons(RenderObject*) const;
-    CompositingReasons directReasons(const RenderLayer*, bool* needToRecomputeCompositingRequirements = 0) const;
+    CompositingReasons directReasons(const RenderLayer*) const;
 
     void updateTriggers();
 
     bool hasOverflowScrollTrigger() const;
 
     bool requiresCompositingForScrollableFrame() const;
-    bool requiresCompositingForPosition(RenderObject*, const RenderLayer*, RenderLayer::ViewportConstrainedNotCompositedReason*, bool* needToRecomputeCompositingRequirements) const;
+    bool requiresCompositingForPosition(RenderObject*, const RenderLayer*, RenderLayer::ViewportConstrainedNotCompositedReason*) const;
 
 private:
     bool isMainFrame() const;
 
-    CompositingReasons nonStyleDeterminedDirectReasons(const RenderLayer*, bool* needToRecomputeCompositingRequirements) const;
+    CompositingReasons nonStyleDeterminedDirectReasons(const RenderLayer*) const;
 
-    bool requiresCompositingForAnimation(RenderObject*) const;
     bool requiresCompositingForTransform(RenderObject*) const;
-    bool requiresCompositingForBackfaceVisibilityHidden(RenderObject*) const;
     bool requiresCompositingForFilters(RenderObject*) const;
-    bool requiresCompositingForOverflowScrollingParent(const RenderLayer*) const;
-    bool requiresCompositingForOutOfFlowClipping(const RenderLayer*) const;
-    bool requiresCompositingForOverflowScrolling(const RenderLayer*) const;
+    bool requiresCompositingForAnimation(RenderObject*) const;
     bool requiresCompositingForPositionSticky(RenderObject*, const RenderLayer*) const;
-    bool requiresCompositingForPositionFixed(RenderObject*, const RenderLayer*, RenderLayer::ViewportConstrainedNotCompositedReason*, bool* needToRecomputeCompositingRequirements) const;
-    bool requiresCompositingForWillChangeCompositingHint(const RenderObject*) const;
+    bool requiresCompositingForPositionFixed(RenderObject*, const RenderLayer*, RenderLayer::ViewportConstrainedNotCompositedReason*) const;
 
     RenderView& m_renderView;
     CompositingTriggerFlags m_compositingTriggers;

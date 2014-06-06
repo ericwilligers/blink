@@ -770,7 +770,7 @@ ExecutionContext* callingExecutionContext(v8::Isolate*);
 v8::Local<v8::Context> toV8Context(ExecutionContext*, DOMWrapperWorld&);
 // Returns a V8 context associated with a LocalFrame and a DOMWrapperWorld.
 // This method returns an empty context if the frame is already detached.
-v8::Local<v8::Context> toV8Context(v8::Isolate*, LocalFrame*, DOMWrapperWorld&);
+v8::Local<v8::Context> toV8Context(LocalFrame*, DOMWrapperWorld&);
 
 // Returns the frame object of the window object associated with
 // a context, if the window is currently being displayed in the LocalFrame.
@@ -925,7 +925,6 @@ private:
 
 class V8TestingScope {
 public:
-    static PassOwnPtr<V8TestingScope> create(v8::Isolate*);
     explicit V8TestingScope(v8::Isolate*);
     ScriptState* scriptState() const;
     v8::Isolate* isolate() const;
@@ -940,6 +939,30 @@ private:
 void GetDevToolsFunctionInfo(v8::Handle<v8::Function>, v8::Isolate*, int& scriptId, String& resourceName, int& lineNumber);
 PassRefPtr<TraceEvent::ConvertableToTraceFormat> devToolsTraceEventData(ExecutionContext*, v8::Handle<v8::Function>, v8::Isolate*);
 
+class V8RethrowTryCatchScope FINAL {
+public:
+    explicit V8RethrowTryCatchScope(v8::TryCatch& block) : m_block(block) { }
+    ~V8RethrowTryCatchScope()
+    {
+        // ReThrow() is a no-op if no exception has been caught, so always call.
+        m_block.ReThrow();
+    }
+
+private:
+    v8::TryCatch& m_block;
+};
+
+class V8ResetTryCatchScope FINAL {
+public:
+    explicit V8ResetTryCatchScope(v8::TryCatch& block) : m_block(block) { }
+    ~V8ResetTryCatchScope()
+    {
+        m_block.Reset();
+    }
+
+private:
+    v8::TryCatch& m_block;
+};
 
 } // namespace WebCore
 

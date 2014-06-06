@@ -63,12 +63,14 @@ class WebCookieJar;
 class WebDataSource;
 class WebDOMEvent;
 class WebFormElement;
+class WebGeolocationClient;
 class WebInputEvent;
 class WebMediaPlayer;
 class WebMediaPlayerClient;
 class WebNotificationPresenter;
 class WebServiceWorkerProvider;
 class WebServiceWorkerProviderClient;
+class WebSocketHandle;
 class WebNode;
 class WebPlugin;
 class WebRTCPeerConnectionHandler;
@@ -439,8 +441,19 @@ public:
 
     // WebSocket -----------------------------------------------------
 
-    // A WebSocket object is going to open new stream connection.
+    // A WebSocket object is going to open a new socket stream connection. Used
+    // by the old WebSocket implementation.
     virtual void willOpenSocketStream(WebSocketStreamHandle*) { }
+
+    // A WebSocket object is going to open a new WebSocket connection. Used by
+    // the new WebSocket implementation.
+    virtual void willOpenWebSocket(WebSocketHandle*) { }
+
+
+    // Geolocation ---------------------------------------------------------
+
+    // Access the embedder API for (client-based) geolocation client .
+    virtual WebGeolocationClient* geolocationClient() { return 0; }
 
 
     // MediaStream -----------------------------------------------------

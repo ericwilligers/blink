@@ -92,8 +92,8 @@ public:
     bool layoutPending() const;
     bool isInPerformLayout() const;
 
-    void setCanRepaintDuringPerformLayout(bool b) { m_canRepaintDuringPerformLayout = b; }
-    bool canRepaintDuringPerformLayout() const { return m_canRepaintDuringPerformLayout; }
+    void setCanInvalidatePaintDuringPerformLayout(bool b) { m_canInvalidatePaintDuringPerformLayout = b; }
+    bool canInvalidatePaintDuringPerformLayout() const { return m_canInvalidatePaintDuringPerformLayout; }
 
     RenderObject* layoutRoot(bool onlyDuringLayout = false) const;
     void clearLayoutSubtreeRoot() { m_layoutSubtreeRoot = 0; }
@@ -111,7 +111,7 @@ public:
     void setLayoutSizeFixedToFrameSize(bool isFixed) { m_layoutSizeFixedToFrameSize = isFixed; }
     bool layoutSizeFixedToFrameSize() { return m_layoutSizeFixedToFrameSize; }
 
-    bool needsFullRepaint() const { return m_doFullRepaint; }
+    bool needsFullPaintInvalidation() const { return m_doFullPaintInvalidation; }
 
     void updateAcceleratedCompositingSettings();
 
@@ -153,7 +153,6 @@ public:
     void setInputEventsTransformForEmulation(const IntSize&, float);
 
     virtual void setScrollPosition(const IntPoint&) OVERRIDE;
-    virtual bool shouldRubberBandInDirection(ScrollDirection) const OVERRIDE;
     virtual bool isRubberBandInProgress() const OVERRIDE;
     void setScrollPositionNonProgrammatically(const IntPoint&);
 
@@ -263,10 +262,10 @@ public:
 
     RenderBox* embeddedContentBox() const;
 
-    void setTracksRepaints(bool);
-    bool isTrackingRepaints() const { return m_isTrackingRepaints; }
-    void resetTrackedRepaints();
-    String trackedRepaintRectsAsText() const;
+    void setTracksPaintInvalidations(bool);
+    bool isTrackingPaintInvalidations() const { return m_isTrackingPaintInvalidations; }
+    void resetTrackedPaintInvalidations();
+    String trackedPaintInvalidationRectsAsText() const;
 
     typedef HashSet<ScrollableArea*> ScrollableAreaSet;
     void addScrollableArea(ScrollableArea*);
@@ -362,13 +361,13 @@ private:
     void scheduleOrPerformPostLayoutTasks();
     void performPostLayoutTasks();
 
-    void repaintTree(RenderObject* root);
+    void invalidateTree(RenderObject* root);
 
     void gatherDebugLayoutRects(RenderObject* layoutRoot);
 
     DocumentLifecycle& lifecycle() const;
 
-    virtual void repaintContentRectangle(const IntRect&) OVERRIDE;
+    virtual void contentRectangleForPaintInvalidation(const IntRect&) OVERRIDE;
     virtual void contentsResized() OVERRIDE;
     virtual void scrollbarExistenceDidChange() OVERRIDE;
 
@@ -394,7 +393,7 @@ private:
     void didScrollTimerFired(Timer<FrameView>*);
 
     void updateLayersAndCompositingAfterScrollIfNeeded();
-    void updateFixedElementRepaintRectsAfterScroll();
+    void updateFixedElementPaintInvalidationRectsAfterScroll();
 
     bool hasCustomScrollbars() const;
     bool shouldUseCustomScrollbars(Element*& customScrollbarElement, LocalFrame*& customScrollbarFrame);
@@ -408,12 +407,12 @@ private:
 
     void setLayoutSizeInternal(const IntSize&);
 
-    bool repaintAllowed() const
+    bool paintInvalidationIsAllowed() const
     {
         if (!RuntimeEnabledFeatures::repaintAfterLayoutEnabled())
             return true;
 
-        return !isInPerformLayout() || canRepaintDuringPerformLayout();
+        return !isInPerformLayout() || canInvalidatePaintDuringPerformLayout();
     }
 
     static double s_currentFrameTimeStamp; // used for detecting decoded resource thrash in the cache
@@ -429,7 +428,7 @@ private:
 
     RefPtr<LocalFrame> m_frame;
 
-    bool m_doFullRepaint;
+    bool m_doFullPaintInvalidation;
 
     bool m_canHaveScrollbars;
     bool m_cannotBlitToWindow;
@@ -442,7 +441,7 @@ private:
 
     bool m_layoutSchedulingEnabled;
     bool m_inPerformLayout;
-    bool m_canRepaintDuringPerformLayout;
+    bool m_canInvalidatePaintDuringPerformLayout;
     bool m_inSynchronousPostLayout;
     int m_layoutCount;
     unsigned m_nestedLayoutCount;
@@ -470,10 +469,10 @@ private:
 
     double m_lastPaintTime;
 
-    bool m_isTrackingRepaints; // Used for testing.
-    Vector<IntRect> m_trackedRepaintRects;
+    bool m_isTrackingPaintInvalidations; // Used for testing.
+    Vector<IntRect> m_trackedPaintInvalidationRects;
 
-    RefPtr<Node> m_nodeToDraw;
+    RefPtrWillBePersistent<Node> m_nodeToDraw;
     PaintBehavior m_paintBehavior;
     bool m_isPainting;
 
@@ -482,7 +481,7 @@ private:
     bool m_isVisuallyNonEmpty;
     bool m_firstVisuallyNonEmptyLayoutCallbackPending;
 
-    RefPtr<Node> m_maintainScrollPositionAnchor;
+    RefPtrWillBePersistent<Node> m_maintainScrollPositionAnchor;
 
     // Renderer to hold our custom scroll corner.
     RenderScrollbarPart* m_scrollCorner;
@@ -540,24 +539,24 @@ inline void FrameView::incrementVisuallyNonEmptyPixelCount(const IntSize& size)
 
 DEFINE_TYPE_CASTS(FrameView, Widget, widget, widget->isFrameView(), widget.isFrameView());
 
-class AllowRepaintScope {
+class AllowPaintInvalidationScope {
 public:
-    explicit AllowRepaintScope(FrameView* view)
+    explicit AllowPaintInvalidationScope(FrameView* view)
         : m_view(view)
-        , m_originalValue(view ? view->canRepaintDuringPerformLayout() : false)
+        , m_originalValue(view ? view->canInvalidatePaintDuringPerformLayout() : false)
     {
         if (!m_view)
             return;
 
-        m_view->setCanRepaintDuringPerformLayout(true);
+        m_view->setCanInvalidatePaintDuringPerformLayout(true);
     }
 
-    ~AllowRepaintScope()
+    ~AllowPaintInvalidationScope()
     {
         if (!m_view)
             return;
 
-        m_view->setCanRepaintDuringPerformLayout(m_originalValue);
+        m_view->setCanInvalidatePaintDuringPerformLayout(m_originalValue);
     }
 private:
     FrameView* m_view;

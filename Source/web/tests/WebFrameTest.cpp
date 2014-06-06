@@ -57,6 +57,7 @@
 #include "core/rendering/RenderView.h"
 #include "core/rendering/TextAutosizer.h"
 #include "core/rendering/compositing/RenderLayerCompositor.h"
+#include "platform/DragImage.h"
 #include "platform/UserGestureIndicator.h"
 #include "platform/geometry/FloatRect.h"
 #include "platform/network/ResourceError.h"
@@ -167,6 +168,17 @@ protected:
         webViewHelper->initializeAndLoad(url, true);
         webViewHelper->webView()->settings()->setDefaultFontSize(12);
         webViewHelper->webView()->resize(WebSize(640, 480));
+    }
+
+    PassOwnPtr<WebCore::DragImage> nodeImageTestSetup(FrameTestHelpers::WebViewHelper* webViewHelper, const std::string& testcase)
+    {
+        registerMockedHttpURLLoad("nodeimage.html");
+        webViewHelper->initializeAndLoad(m_baseURL + "nodeimage.html");
+        webViewHelper->webView()->resize(WebSize(640, 480));
+        webViewHelper->webView()->layout();
+        RefPtr<WebCore::LocalFrame> frame = webViewHelper->webViewImpl()->page()->mainFrame();
+        WebCore::Element* element = frame->document()->getElementById(testcase.c_str());
+        return frame->nodeImage(*element);
     }
 
     std::string m_baseURL;
@@ -3414,6 +3426,37 @@ TEST_F(WebFrameTest, FindDetachFrameWhileScopingStrings)
     holdSecondFrame.release();
 }
 
+TEST_F(WebFrameTest, ResetMatchCount)
+{
+    registerMockedHttpURLLoad("find_in_generated_frame.html");
+
+    FindUpdateWebFrameClient client;
+    FrameTestHelpers::WebViewHelper webViewHelper;
+    webViewHelper.initializeAndLoad(m_baseURL + "find_in_generated_frame.html", true, &client);
+    webViewHelper.webView()->resize(WebSize(640, 480));
+    webViewHelper.webView()->layout();
+    runPendingTasks();
+
+    static const char* kFindString = "result";
+    static const int kFindIdentifier = 12345;
+
+    WebFindOptions options;
+    WebString searchText = WebString::fromUTF8(kFindString);
+    WebLocalFrameImpl* mainFrame = toWebLocalFrameImpl(webViewHelper.webView()->mainFrame());
+
+    // Check that child frame exists.
+    EXPECT_TRUE(!!mainFrame->traverseNext(false));
+
+    for (WebFrame* frame = mainFrame; frame; frame = frame->traverseNext(false)) {
+        EXPECT_FALSE(frame->find(kFindIdentifier, searchText, options, false, 0));
+    }
+
+    runPendingTasks();
+    EXPECT_FALSE(client.findResultsAreReady());
+
+    mainFrame->resetMatchCount();
+}
+
 TEST_F(WebFrameTest, SetTickmarks)
 {
     registerMockedHttpURLLoad("find.html");
@@ -5351,6 +5394,30 @@ TEST_F(WebFrameTest, FullscreenLayerNonScrollable)
     ASSERT_TRUE(webScrollLayer->scrollable());
 }
 
+TEST_F(WebFrameTest, FullscreenMainFrameScrollable)
+{
+    FakeCompositingWebViewClient client;
+    registerMockedHttpURLLoad("fullscreen_div.html");
+    FrameTestHelpers::WebViewHelper webViewHelper;
+    int viewportWidth = 640;
+    int viewportHeight = 480;
+    WebViewImpl* webViewImpl = webViewHelper.initializeAndLoad(m_baseURL + "fullscreen_div.html", true, 0, &client, &configueCompositingWebView);
+    webViewImpl->resize(WebSize(viewportWidth, viewportHeight));
+    webViewImpl->layout();
+
+    Document* document = toWebLocalFrameImpl(webViewImpl->mainFrame())->frame()->document();
+    WebCore::UserGestureIndicator gesture(WebCore::DefinitelyProcessingUserGesture);
+    document->documentElement()->webkitRequestFullscreen();
+    webViewImpl->willEnterFullScreen();
+    webViewImpl->didEnterFullScreen();
+    webViewImpl->layout();
+
+    // Verify that the main frame is still scrollable.
+    ASSERT_TRUE(WebCore::FullscreenElementStack::isFullScreen(*document));
+    WebLayer* webScrollLayer = webViewImpl->compositor()->scrollLayer()->platformLayer();
+    ASSERT_TRUE(webScrollLayer->scrollable());
+}
+
 TEST_F(WebFrameTest, RenderBlockPercentHeightDescendants)
 {
     registerMockedHttpURLLoad("percent-height-descendants.html");
@@ -5423,6 +5490,54 @@ TEST_F(WebFrameTest, NotifyManifestChange)
     webViewHelper.initializeAndLoad(m_baseURL + "link-manifest-change.html", true, &webFrameClient);
 
     EXPECT_EQ(14, webFrameClient.manifestChangeCount());
+}
+
+TEST_F(WebFrameTest, ReloadBypassingCache)
+{
+    // Check that a reload ignoring cache on a frame will result in the cache
+    // policy of the request being set to ReloadBypassingCache.
+    registerMockedHttpURLLoad("foo.html");
+    FrameTestHelpers::WebViewHelper webViewHelper;
+    webViewHelper.initializeAndLoad(m_baseURL + "foo.html", true);
+    WebFrame* frame = webViewHelper.webView()->mainFrame();
+    FrameTestHelpers::reloadFrameIgnoringCache(frame);
+    EXPECT_EQ(WebURLRequest::ReloadBypassingCache, frame->dataSource()->request().cachePolicy());
+}
+
+TEST_F(WebFrameTest, NodeImageTestCSSTransform)
+{
+    FrameTestHelpers::WebViewHelper webViewHelper;
+    OwnPtr<WebCore::DragImage> dragImage = nodeImageTestSetup(&webViewHelper, std::string("case-css-transform"));
+    EXPECT_TRUE(dragImage);
+
+    SkBitmap bitmap;
+    ASSERT_TRUE(bitmap.allocN32Pixels(40, 40));
+    SkCanvas canvas(bitmap);
+    canvas.drawColor(SK_ColorGREEN);
+
+    EXPECT_EQ(40, dragImage->size().width());
+    EXPECT_EQ(40, dragImage->size().height());
+    const SkBitmap& dragBitmap = dragImage->bitmap();
+    SkAutoLockPixels lockPixel(dragBitmap);
+    EXPECT_EQ(0, memcmp(bitmap.getPixels(), dragBitmap.getPixels(), bitmap.getSize()));
+}
+
+TEST_F(WebFrameTest, NodeImageTestCSS3DTransform)
+{
+    FrameTestHelpers::WebViewHelper webViewHelper;
+    OwnPtr<WebCore::DragImage> dragImage = nodeImageTestSetup(&webViewHelper, std::string("case-css-3dtransform"));
+    EXPECT_TRUE(dragImage);
+
+    SkBitmap bitmap;
+    ASSERT_TRUE(bitmap.allocN32Pixels(20, 40));
+    SkCanvas canvas(bitmap);
+    canvas.drawColor(SK_ColorGREEN);
+
+    EXPECT_EQ(20, dragImage->size().width());
+    EXPECT_EQ(40, dragImage->size().height());
+    const SkBitmap& dragBitmap = dragImage->bitmap();
+    SkAutoLockPixels lockPixel(dragBitmap);
+    EXPECT_EQ(0, memcmp(bitmap.getPixels(), dragBitmap.getPixels(), bitmap.getSize()));
 }
 
 } // namespace

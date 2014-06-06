@@ -109,10 +109,6 @@ RenderLayer::RenderLayer(RenderLayerModelObject* renderer, LayerType type)
     : m_layerType(type)
     , m_hasSelfPaintingLayerDescendant(false)
     , m_hasSelfPaintingLayerDescendantDirty(false)
-    , m_hasOutOfFlowPositionedDescendant(false)
-    , m_hasOutOfFlowPositionedDescendantDirty(true)
-    , m_hasUnclippedDescendant(false)
-    , m_isUnclippedDescendant(false)
     , m_isRootLayer(renderer->isRenderView())
     , m_usedTransparency(false)
     , m_visibleContentStatusDirty(true)
@@ -163,9 +159,6 @@ RenderLayer::RenderLayer(RenderLayerModelObject* renderer, LayerType type)
 
 RenderLayer::~RenderLayer()
 {
-    if (!m_renderer->documentBeingDestroyed())
-        compositor()->removeOutOfFlowPositionedLayer(this);
-
     if (renderer()->frame() && renderer()->frame()->page()) {
         if (ScrollingCoordinator* scrollingCoordinator = renderer()->frame()->page()->scrollingCoordinator())
             scrollingCoordinator->willDestroyRenderLayer(this);
@@ -208,8 +201,10 @@ void RenderLayer::contentChanged(ContentChangeType changeType)
     DisableCompositingQueryAsserts disabler;
 
     // This can get called when video becomes accelerated, so the layers may change.
-    if (changeType == CanvasChanged || changeType == VideoChanged || changeType == FullScreenChanged)
+    if (changeType == CanvasChanged || changeType == VideoChanged || changeType == FullScreenChanged) {
         compositor()->updateLayerCompositingState(this);
+        compositor()->setNeedsCompositingUpdate(CompositingUpdateAfterCompositingInputChange);
+    }
 
     if (changeType == CanvasContextChanged) {
         compositor()->setNeedsCompositingUpdate(CompositingUpdateAfterCompositingInputChange);
@@ -270,11 +265,17 @@ void RenderLayer::updateLayerPositionsAfterLayout(const RenderLayer* rootLayer, 
     RenderGeometryMap geometryMap(UseTransforms);
     if (this != rootLayer)
         geometryMap.pushMappingsToAncestor(parent(), 0);
-    updateLayerPositions(&geometryMap, flags);
+    updateLayerPositions(&geometryMap, rootLayer->renderer()->containerForRepaint(), flags);
 }
 
-void RenderLayer::updateLayerPositions(RenderGeometryMap* geometryMap, UpdateLayerPositionsFlags flags)
+void RenderLayer::updateLayerPositions(RenderGeometryMap* geometryMap, const RenderLayerModelObject* paintInvalidationContainer, UpdateLayerPositionsFlags flags)
 {
+    // For performance reasons we only check if the RenderObject has moved if we
+    // have a geometryMap. If not, blank out the paint invalidation container so we
+    // can skip doing any further work to update it.
+    if (!geometryMap)
+        paintInvalidationContainer = 0;
+
     updateLayerPosition(); // For relpositioned layers or non-positioned layers,
                            // we need to keep in sync, since we may have shifted relative
                            // to our parent layer.
@@ -305,6 +306,18 @@ void RenderLayer::updateLayerPositions(RenderGeometryMap* geometryMap, UpdateLay
         m_enclosingPaginationLayer = 0;
     }
 
+    const RenderLayerModelObject* newPaintInvalidationContainer = paintInvalidationContainer;
+    // If we don't have a paintInvalidationContainer then we can't check if
+    // the object has moved.
+    if (RuntimeEnabledFeatures::repaintAfterLayoutEnabled() && paintInvalidationContainer) {
+        bool establishesNewPaintInvalidationContainer = isRepaintContainer();
+        newPaintInvalidationContainer = renderer()->adjustCompositedContainerForSpecialAncestors(establishesNewPaintInvalidationContainer ? renderer() : paintInvalidationContainer);
+
+        LayoutPoint offset = renderer()->isBox() ? toRenderBox(renderer())->location() : LayoutPoint();
+        if (renderer()->previousPositionFromPaintInvalidationContainer() != geometryMap->mapToContainer(offset, newPaintInvalidationContainer))
+            renderer()->setMayNeedPaintInvalidation(true);
+    }
+
     repainter().repaintAfterLayout(flags & CheckForRepaint);
 
     // Go ahead and update the reflection's position and size.
@@ -320,7 +333,7 @@ void RenderLayer::updateLayerPositions(RenderGeometryMap* geometryMap, UpdateLay
         flags |= UpdatePagination;
 
     for (RenderLayer* child = firstChild(); child; child = child->nextSibling())
-        child->updateLayerPositions(geometryMap, flags);
+        child->updateLayerPositions(geometryMap, newPaintInvalidationContainer, flags);
 
     if ((flags & NeedsFullRepaintInBacking) && hasCompositedLayerMapping() && !compositedLayerMapping()->paintsIntoCompositedAncestor())
         compositedLayerMapping()->setContentsNeedDisplay();
@@ -348,35 +361,6 @@ void RenderLayer::dirtyAncestorChainHasSelfPaintingLayerDescendantStatus()
         // in this case, there is no need to dirty our ancestors further.
         if (layer->isSelfPaintingLayer()) {
             ASSERT(!parent() || parent()->m_hasSelfPaintingLayerDescendantDirty || parent()->hasSelfPaintingLayerDescendant());
-            break;
-        }
-    }
-}
-
-void RenderLayer::setAncestorChainHasOutOfFlowPositionedDescendant()
-{
-    for (RenderLayer* layer = this; layer; layer = layer->parent()) {
-        if (!layer->m_hasOutOfFlowPositionedDescendantDirty && layer->hasOutOfFlowPositionedDescendant())
-            break;
-
-        layer->setHasOutOfFlowPositionedDescendantDirty(false);
-        layer->setHasOutOfFlowPositionedDescendant(true);
-    }
-}
-
-void RenderLayer::dirtyAncestorChainHasOutOfFlowPositionedDescendantStatus()
-{
-    for (RenderLayer* layer = this; layer; layer = layer->parent()) {
-        layer->setHasOutOfFlowPositionedDescendantDirty(true);
-
-        // We may or may not have an unclipped descendant. If we do, we'll reset
-        // this to true the next time composited scrolling state is updated.
-        layer->setHasUnclippedDescendant(false);
-
-        // If we have reached an out of flow positioned layer, we know our parent should have an out-of-flow positioned descendant.
-        // In this case, there is no need to dirty our ancestors further.
-        if (layer->renderer()->isOutOfFlowPositioned()) {
-            ASSERT(!parent() || parent()->m_hasOutOfFlowPositionedDescendantDirty || parent()->hasOutOfFlowPositionedDescendant());
             break;
         }
     }
@@ -709,6 +693,48 @@ void RenderLayer::updatePagination()
     }
 }
 
+void RenderLayer::mapRectToRepaintBacking(const RenderLayerModelObject* repaintContainer, LayoutRect& rect) const
+{
+    if (!repaintContainer->groupedMapping()) {
+        m_renderer->mapRectToRepaintBacking(repaintContainer, rect);
+        return;
+    }
+
+    ASSERT(enclosingTransformedAncestor());
+    ASSERT(enclosingTransformedAncestor()->renderer());
+
+    // FIXME: this defensive code should not have to exist. None of these pointers should ever be 0. See crbug.com/370410.
+    RenderLayerModelObject* transformedAncestor = 0;
+    if (RenderLayer* ancestor = repaintContainer->layer()->enclosingTransformedAncestor())
+        transformedAncestor = ancestor->renderer();
+    if (!transformedAncestor)
+        return;
+
+    // If the transformedAncestor is actually the RenderView, we might get
+    // confused and think that we can use LayoutState. Ideally, we'd made
+    // LayoutState work for all composited layers as well, but until then
+    // we need to disable LayoutState for squashed layers.
+    LayoutStateDisabler layoutStateDisabler(*transformedAncestor);
+
+    // This code adjusts the repaint rectangle to be in the space of the transformed ancestor of the grouped (i.e. squashed)
+    // layer. This is because all layers that squash together need to repaint w.r.t. a single container that is
+    // an ancestor of all of them, in order to properly take into account any local transforms etc.
+    // FIXME: remove this special-case code that works around the repainting code structure.
+    m_renderer->mapRectToRepaintBacking(transformedAncestor, rect);
+    rect.moveBy(-repaintContainer->groupedMapping()->squashingOffsetFromTransformedAncestor());
+
+    return;
+}
+
+LayoutRect RenderLayer::computeRepaintRect(const RenderObject* renderObject, const RenderLayer* repaintContainer)
+{
+    if (!repaintContainer->groupedMapping())
+        return renderObject->computeRepaintRect(repaintContainer->renderer());
+    LayoutRect rect = renderObject->clippedOverflowRectForRepaint(repaintContainer->renderer());
+    repaintContainer->mapRectToRepaintBacking(repaintContainer->renderer(), rect);
+    return rect;
+}
+
 void RenderLayer::setHasVisibleContent()
 {
     if (m_hasVisibleContent && !m_visibleContentStatusDirty) {
@@ -765,33 +791,6 @@ void RenderLayer::setAncestorChainHasVisibleDescendant()
     }
 }
 
-void RenderLayer::updateHasUnclippedDescendant()
-{
-    TRACE_EVENT0("blink_rendering", "RenderLayer::updateHasUnclippedDescendant");
-    ASSERT(renderer()->isOutOfFlowPositioned());
-    if (!m_hasVisibleContent && !m_hasVisibleDescendant)
-        return;
-
-    FrameView* frameView = renderer()->view()->frameView();
-    if (!frameView)
-        return;
-
-    const RenderObject* containingBlock = renderer()->containingBlock();
-    setIsUnclippedDescendant(false);
-    for (RenderLayer* ancestor = parent(); ancestor && ancestor->renderer() != containingBlock; ancestor = ancestor->parent()) {
-        // TODO(vollick): This isn't quite right. Whenever ancestor is composited and clips
-        // overflow, we're technically unclipped. However, this will currently cause a huge
-        // number of layers to report that they are unclipped. Eventually, when we've formally
-        // separated the clipping, transform, opacity, and stacking trees here and in the
-        // compositor, we will be able to relax this restriction without it being prohibitively
-        // expensive (currently, we have to do a lot of work in the compositor to honor a
-        // clip child/parent relationship).
-        if (ancestor->scrollsOverflow())
-            setIsUnclippedDescendant(true);
-        ancestor->setHasUnclippedDescendant(true);
-    }
-}
-
 // FIXME: this is quite brute-force. We could be more efficient if we were to
 // track state and update it as appropriate as changes are made in the Render tree.
 void RenderLayer::updateScrollingStateAfterCompositingChange()
@@ -814,36 +813,27 @@ void RenderLayer::updateScrollingStateAfterCompositingChange()
     }
 }
 
-static bool subtreeContainsOutOfFlowPositionedLayer(const RenderLayer* subtreeRoot)
-{
-    return (subtreeRoot->renderer() && subtreeRoot->renderer()->isOutOfFlowPositioned()) || subtreeRoot->hasOutOfFlowPositionedDescendant();
-}
-
 void RenderLayer::updateDescendantDependentFlags()
 {
-    if (m_visibleDescendantStatusDirty || m_hasSelfPaintingLayerDescendantDirty || m_hasOutOfFlowPositionedDescendantDirty) {
+    if (m_visibleDescendantStatusDirty || m_hasSelfPaintingLayerDescendantDirty) {
         m_hasVisibleDescendant = false;
         m_hasSelfPaintingLayerDescendant = false;
-        m_hasOutOfFlowPositionedDescendant = false;
 
         for (RenderLayer* child = firstChild(); child; child = child->nextSibling()) {
             child->updateDescendantDependentFlags();
 
             bool hasVisibleDescendant = child->m_hasVisibleContent || child->m_hasVisibleDescendant;
             bool hasSelfPaintingLayerDescendant = child->isSelfPaintingLayer() || child->hasSelfPaintingLayerDescendant();
-            bool hasOutOfFlowPositionedDescendant = subtreeContainsOutOfFlowPositionedLayer(child);
 
             m_hasVisibleDescendant |= hasVisibleDescendant;
             m_hasSelfPaintingLayerDescendant |= hasSelfPaintingLayerDescendant;
-            m_hasOutOfFlowPositionedDescendant |= hasOutOfFlowPositionedDescendant;
 
-            if (m_hasVisibleDescendant && m_hasSelfPaintingLayerDescendant && hasOutOfFlowPositionedDescendant)
+            if (m_hasVisibleDescendant && m_hasSelfPaintingLayerDescendant)
                 break;
         }
 
         m_visibleDescendantStatusDirty = false;
         m_hasSelfPaintingLayerDescendantDirty = false;
-        m_hasOutOfFlowPositionedDescendantDirty = false;
     }
 
     if (m_blendInfo.childLayerHasBlendModeStatusDirty()) {
@@ -1431,15 +1421,6 @@ void RenderLayer::addChild(RenderLayer* child, RenderLayer* beforeChild)
     if (child->blendInfo().hasBlendMode() || child->blendInfo().childLayerHasBlendMode())
         m_blendInfo.setAncestorChainBlendedDescendant();
 
-    if (subtreeContainsOutOfFlowPositionedLayer(child)) {
-        // Now that the out of flow positioned descendant is in the tree, we
-        // need to tell the compositor to reevaluate the compositing
-        // requirements since we may be able to mark more layers as having
-        // an 'unclipped' descendant.
-        compositor()->setNeedsUpdateCompositingRequirementsState();
-        setAncestorChainHasOutOfFlowPositionedDescendant();
-    }
-
     compositor()->layerWasAdded(this, child);
 }
 
@@ -1477,13 +1458,6 @@ RenderLayer* RenderLayer::removeChild(RenderLayer* oldChild)
     oldChild->m_parent = 0;
 
     oldChild->updateDescendantDependentFlags();
-    if (subtreeContainsOutOfFlowPositionedLayer(oldChild)) {
-        // It may now be the case that a layer no longer has an unclipped
-        // descendant. Let the compositor know that it needs to reevaluate
-        // its compositing requirements to check this.
-        compositor()->setNeedsUpdateCompositingRequirementsState();
-        dirtyAncestorChainHasOutOfFlowPositionedDescendantStatus();
-    }
 
     if (oldChild->m_hasVisibleContent || oldChild->m_hasVisibleDescendant)
         dirtyAncestorChainVisibleDescendantStatus();
@@ -1522,14 +1496,14 @@ void RenderLayer::removeOnlyThisLayer()
         m_parent->addChild(current, nextSib);
 
         if (RuntimeEnabledFeatures::repaintAfterLayoutEnabled())
-            current->renderer()->setShouldDoFullRepaintAfterLayout(true);
+            current->renderer()->setShouldDoFullPaintInvalidationAfterLayout(true);
         else
             current->repainter().setRepaintStatus(NeedsFullRepaint);
 
         // Hits in compositing/overflow/automatically-opt-into-composited-scrolling-part-1.html
         DisableCompositingQueryAsserts disabler;
 
-        current->updateLayerPositions(0); // FIXME: use geometry map.
+        current->updateLayerPositions(0, 0); // FIXME: use geometry map.
         current = next;
     }
 
@@ -3384,6 +3358,21 @@ LayoutRect RenderLayer::physicalBoundingBoxIncludingReflectionAndStackingChildre
     return result;
 }
 
+static void expandCompositingRectForStackingChildren(const RenderLayer* ancestorLayer, RenderLayer::CalculateBoundsOptions options, LayoutRect& result)
+{
+    RenderLayerStackingNodeIterator iterator(*ancestorLayer->stackingNode(), AllChildren);
+    while (RenderLayerStackingNode* node = iterator.next()) {
+        // Here we exclude both directly composited layers and squashing layers
+        // because those RenderLayers don't paint into the graphics layer
+        // for this RenderLayer. For example, the bounds of squashed RenderLayers
+        // will be included in the computation of the appropriate squashing
+        // GraphicsLayer.
+        if (options != RenderLayer::ApplyBoundsChickenEggHacks && node->layer()->compositingState() != NotComposited)
+            continue;
+        result.unite(node->layer()->boundingBoxForCompositing(ancestorLayer, options));
+    }
+}
+
 LayoutRect RenderLayer::boundingBoxForCompositing(const RenderLayer* ancestorLayer, CalculateBoundsOptions options) const
 {
     if (!isSelfPaintingLayer())
@@ -3427,17 +3416,15 @@ LayoutRect RenderLayer::boundingBoxForCompositing(const RenderLayer* ancestorLay
     LayerListMutationDetector mutationChecker(const_cast<RenderLayer*>(this)->stackingNode());
 #endif
 
-    RenderLayerStackingNodeIterator iterator(*m_stackingNode.get(), AllChildren);
-    while (RenderLayerStackingNode* node = iterator.next()) {
-        // Here we exclude both directly composited layers and squashing layers
-        // because those RenderLayers don't paint into the graphics layer
-        // for this RenderLayer. For example, the bounds of squashed RenderLayers
-        // will be included in the computation of the appropriate squashing
-        // GraphicsLayer.
-        if (options != ApplyBoundsChickenEggHacks && node->layer()->compositingState() != NotComposited)
-            continue;
-        result.unite(node->layer()->boundingBoxForCompositing(this, options));
-    }
+    // Reflections are implemented with RenderLayers that hang off of the reflected layer. However,
+    // the reflection layer subtree does not include the subtree of the parent RenderLayer, so
+    // a recursive computation of stacking children yields no results. This breaks cases when there are stacking
+    // children of the parent, that need to be included in reflected composited bounds.
+    // Fix this by including composited bounds of stacking children of the reflected RenderLayer.
+    if (parent() && parent()->reflectionInfo() && parent()->reflectionInfo()->reflectionLayer() == this)
+        expandCompositingRectForStackingChildren(parent(), options, result);
+    else
+        expandCompositingRectForStackingChildren(this, options, result);
 
     // FIXME: We can optimize the size of the composited layers, by not enlarging
     // filtered areas with the outsets if we know that the filter is going to render in hardware.
@@ -3625,6 +3612,8 @@ bool RenderLayer::childBackgroundIsKnownToBeOpaqueInRect(const LayoutRect& local
 
 bool RenderLayer::shouldBeSelfPaintingLayer() const
 {
+    if (renderer()->isRenderPart() && toRenderPart(renderer())->requiresAcceleratedCompositing())
+        return true;
     return m_layerType == NormalLayer
         || (m_scrollableArea && m_scrollableArea->hasOverlayScrollbars())
         || needsCompositedScrolling();
@@ -3696,44 +3685,6 @@ bool RenderLayer::isVisuallyNonEmpty() const
         return true;
 
     return false;
-}
-
-void RenderLayer::updateOutOfFlowPositioned(const RenderStyle* oldStyle)
-{
-    ASSERT(!oldStyle || renderer()->style()->position() != oldStyle->position());
-
-    bool wasOutOfFlowPositioned = oldStyle && (oldStyle->position() == AbsolutePosition || oldStyle->position() == FixedPosition);
-    bool isOutOfFlowPositioned = renderer()->isOutOfFlowPositioned();
-    if (!wasOutOfFlowPositioned && !isOutOfFlowPositioned)
-        return;
-
-    // Even if the layer remains out-of-flow, a change to this property
-    // will likely change its containing block. We must clear these bits
-    // so that they can be set properly by the RenderLayerCompositor.
-    for (RenderLayer* ancestor = parent(); ancestor; ancestor = ancestor->parent())
-        ancestor->setHasUnclippedDescendant(false);
-
-    // Ensures that we reset the above bits correctly.
-    compositor()->setNeedsUpdateCompositingRequirementsState();
-
-    if (wasOutOfFlowPositioned && isOutOfFlowPositioned)
-        return;
-
-    if (isOutOfFlowPositioned) {
-        setAncestorChainHasOutOfFlowPositionedDescendant();
-        compositor()->addOutOfFlowPositionedLayer(this);
-    } else {
-        dirtyAncestorChainHasSelfPaintingLayerDescendantStatus();
-        compositor()->removeOutOfFlowPositionedLayer(this);
-
-        // We need to reset the isUnclippedDescendant bit here because normally
-        // the "unclipped-ness" property is only updated in
-        // RenderLayerCompositor::updateCompositingRequirementsState(). However,
-        // it is only updated for layers which are known to be out of flow.
-        // Since this is no longer out of flow, we have to explicitly ensure
-        // that it doesn't think it is unclipped.
-        setIsUnclippedDescendant(false);
-    }
 }
 
 static bool hasOrHadFilters(const RenderStyle* oldStyle, const RenderStyle* newStyle)
@@ -3814,19 +3765,9 @@ void RenderLayer::styleChanged(StyleDifference diff, const RenderStyle* oldStyle
     if (m_scrollableArea)
         m_scrollableArea->updateAfterStyleChange(oldStyle);
 
-    if (!oldStyle || oldStyle->visibility() != renderer()->style()->visibility()) {
-        ASSERT(!oldStyle || diff.needsRepaint() || diff.needsLayout());
-        compositor()->setNeedsUpdateCompositingRequirementsState();
-    }
-
     // Overlay scrollbars can make this layer self-painting so we need
     // to recompute the bit once scrollbars have been updated.
     updateSelfPaintingLayer();
-
-    if (!oldStyle || renderer()->style()->position() != oldStyle->position()) {
-        ASSERT(!oldStyle || diff.needsFullLayout());
-        updateOutOfFlowPositioned(oldStyle);
-    }
 
     if (!oldStyle || !renderer()->style()->reflectionDataEquivalent(oldStyle)) {
         ASSERT(!oldStyle || diff.needsFullLayout());
@@ -3958,7 +3899,7 @@ void RenderLayer::filterNeedsRepaint()
 
     if (renderer()->view()) {
         if (RuntimeEnabledFeatures::repaintAfterLayoutEnabled() && renderer()->frameView()->isInPerformLayout())
-            renderer()->setShouldDoFullRepaintAfterLayout(true);
+            renderer()->setShouldDoFullPaintInvalidationAfterLayout(true);
         else
             renderer()->repaint();
     }

@@ -290,6 +290,7 @@ WebInspector.ProfileType.DataDisplayDelegate.prototype = {
 /**
  * @constructor
  * @extends {WebInspector.TargetAwareObject}
+ * @param {!WebInspector.Target} target
  * @param {!WebInspector.ProfileType} profileType
  * @param {string} title
  */
@@ -566,7 +567,7 @@ WebInspector.ProfilesPanel.prototype = {
         function didChangeInterval(error)
         {
             if (error)
-                WebInspector.console.showErrorMessage(error);
+                WebInspector.messageSink.addErrorMessage(error, true);
         }
     },
 
@@ -587,12 +588,12 @@ WebInspector.ProfilesPanel.prototype = {
                     continue;
                 extensions.push(extension);
             }
-            WebInspector.console.log(WebInspector.UIString("Can't load file. Only files with extensions '%s' can be loaded.", extensions.join("', '")));
+            WebInspector.messageSink.addMessage(WebInspector.UIString("Can't load file. Only files with extensions '%s' can be loaded.", extensions.join("', '")));
             return;
         }
 
         if (!!profileType.profileBeingRecorded()) {
-            WebInspector.console.log(WebInspector.UIString("Can't load profile when other profile is recording."));
+            WebInspector.messageSink.addMessage(WebInspector.UIString("Can't load profile while another profile is recording."));
             return;
         }
 
@@ -795,7 +796,7 @@ WebInspector.ProfilesPanel.prototype = {
     {
         var profileType = profile.profileType();
         var typeId = profileType.id;
-        this._typeIdToSidebarSection[typeId].addProfileHeader(profile);;
+        this._typeIdToSidebarSection[typeId].addProfileHeader(profile);
         if (!this.visibleView || this.visibleView === this._launcherView)
             this.showProfile(profile);
     },
@@ -978,6 +979,7 @@ WebInspector.ProfilesPanel.prototype = {
     },
 
     /**
+     * @param {!Event} event
      * @param {!WebInspector.ContextMenu} contextMenu
      * @param {!Object} target
      */
@@ -1179,6 +1181,7 @@ WebInspector.ProfilesPanel.ContextMenuProvider = function()
 
 WebInspector.ProfilesPanel.ContextMenuProvider.prototype = {
     /**
+     * @param {!Event} event
      * @param {!WebInspector.ContextMenu} contextMenu
      * @param {!Object} target
      */

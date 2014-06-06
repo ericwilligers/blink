@@ -101,10 +101,6 @@ public:
     // created, destroyed or re-parented).
     void setCompositingLayersNeedRebuild();
 
-    // Updating properties required for determining if compositing is necessary.
-    void updateCompositingRequirementsState();
-    void setNeedsUpdateCompositingRequirementsState() { m_needsUpdateCompositingRequirementsState = true; }
-
     // Used to indicate that a compositing update will be needed for the next frame that gets drawn.
     void setNeedsCompositingUpdate(CompositingUpdateType);
 
@@ -180,13 +176,8 @@ public:
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
 
-    void addOutOfFlowPositionedLayer(RenderLayer*);
-    void removeOutOfFlowPositionedLayer(RenderLayer*);
-
     void resetTrackedRepaintRects();
     void setTracksRepaints(bool);
-
-    void setNeedsToRecomputeCompositingRequirements() { m_needsToRecomputeCompositingRequirements = true; }
 
     virtual String debugName(const GraphicsLayer*) OVERRIDE;
 
@@ -201,10 +192,14 @@ public:
 
     void updateDirectCompositingReasons(RenderLayer*);
 
+    void setOverlayLayer(GraphicsLayer*);
+
 private:
     class OverlapMap;
 
+#if ASSERT_ENABLED
     void assertNoUnresolvedDirtyBits();
+#endif
 
     // Make updates to the layer based on viewport-constrained properties such as position:fixed. This can in turn affect
     // compositing.
@@ -234,8 +229,6 @@ private:
     void detachRootLayer();
 
     void updateOverflowControlsLayers();
-
-    void notifyIFramesOfCompositingChange();
 
     Page* page() const;
 
@@ -268,7 +261,6 @@ private:
     CompositingUpdateType m_pendingUpdateType;
 
     bool m_hasAcceleratedCompositing;
-    bool m_needsToRecomputeCompositingRequirements;
     bool m_compositing;
     bool m_compositingLayersNeedRebuild;
 
@@ -280,7 +272,6 @@ private:
     // except the one in updateIfNeeded, then rename this to
     // m_compositingDirty.
     bool m_rootShouldAlwaysCompositeDirty;
-    bool m_needsUpdateCompositingRequirementsState;
     bool m_needsUpdateFixedBackground;
     bool m_isTrackingRepaints; // Used for testing.
 
@@ -289,10 +280,6 @@ private:
     // Enclosing container layer, which clips for iframe content
     OwnPtr<GraphicsLayer> m_containerLayer;
     OwnPtr<GraphicsLayer> m_scrollLayer;
-
-    // This is used in updateCompositingRequirementsState to avoid full tree
-    // walks while determining if layers have unclipped descendants.
-    HashSet<RenderLayer*> m_outOfFlowPositionedLayers;
 
     // Enclosing layer for overflow controls and the clipping layer
     OwnPtr<GraphicsLayer> m_overflowControlsHostLayer;

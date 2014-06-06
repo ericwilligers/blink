@@ -135,14 +135,14 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
                 // FIXME: This invalidation is overly broad. We should update to
                 // do the correct invalidation at RenderStyle::diff time. crbug.com/349061
                 if (RuntimeEnabledFeatures::repaintAfterLayoutEnabled())
-                    layer()->renderer()->setShouldDoFullRepaintAfterLayout(true);
+                    layer()->renderer()->setShouldDoFullPaintInvalidationAfterLayout(true);
                 else
                     layer()->repainter().setRepaintStatus(NeedsFullRepaint);
                 // Hit in animations/interpolation/perspective-interpolation.html
                 DisableCompositingQueryAsserts disabler;
                 // There is only one layer to update, it is not worth using |cachedOffset| since
                 // we are not sure the value will be used.
-                layer()->updateLayerPositions(0);
+                layer()->updateLayerPositions(0, 0);
             }
         }
     } else if (layer() && layer()->parent()) {

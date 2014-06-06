@@ -128,7 +128,8 @@ void ImageDocumentParser::appendBytes(const char* data, size_t length)
     if (!frame->loader().client()->allowImage(!settings || settings->imagesEnabled(), document()->url()))
         return;
 
-    document()->cachedImage()->appendData(data, length);
+    if (document()->cachedImage())
+        document()->cachedImage()->appendData(data, length);
     // Make sure the image renderer gets created because we need the renderer
     // to read the aspect ratio. See crbug.com/320244
     document()->updateRenderTreeIfNeeded();
@@ -137,7 +138,7 @@ void ImageDocumentParser::appendBytes(const char* data, size_t length)
 
 void ImageDocumentParser::finish()
 {
-    if (!isStopped() && document()->imageElement()) {
+    if (!isStopped() && document()->imageElement() && document()->cachedImage()) {
         ImageResource* cachedImage = document()->cachedImage();
         cachedImage->finish();
         cachedImage->setResponse(document()->frame()->loader().documentLoader()->response());
@@ -365,11 +366,13 @@ bool ImageDocument::shouldShrinkToFit() const
     return frame()->settings()->shrinksStandaloneImagesToFit() && frame()->isMainFrame();
 }
 
+#if !ENABLE(OILPAN)
 void ImageDocument::dispose()
 {
     m_imageElement = nullptr;
     HTMLDocument::dispose();
 }
+#endif
 
 void ImageDocument::trace(Visitor* visitor)
 {

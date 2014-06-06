@@ -279,8 +279,8 @@ void InsertListCommand::unlistifyParagraph(const VisiblePosition& originalStart,
     }
     // When removing a list, we must always create a placeholder to act as a point of insertion
     // for the list content being removed.
-    RefPtr<Element> placeholder = createBreakElement(document());
-    RefPtr<Element> nodeToInsert = placeholder;
+    RefPtrWillBeRawPtr<Element> placeholder = createBreakElement(document());
+    RefPtrWillBeRawPtr<Element> nodeToInsert = placeholder;
     // If the content of the list item will be moved into another list, put it in a list item
     // so that we don't create an orphaned list child.
     if (enclosingList(listNode)) {
@@ -362,7 +362,7 @@ PassRefPtrWillBeRawPtr<HTMLElement> InsertListCommand::listifyParagraph(const Vi
             // Inserting the list into an empty paragraph that isn't held open
             // by a br or a '\n', will invalidate start and end.  Insert
             // a placeholder and then recompute start and end.
-            RefPtr<Node> placeholder = insertBlockPlaceholder(start.deepEquivalent());
+            RefPtrWillBeRawPtr<Node> placeholder = insertBlockPlaceholder(start.deepEquivalent());
             start = VisiblePosition(positionBeforeNode(placeholder.get()));
             end = start;
         }
@@ -384,13 +384,15 @@ PassRefPtrWillBeRawPtr<HTMLElement> InsertListCommand::listifyParagraph(const Vi
         // Update the start of content, so we don't try to move the list into itself.  bug 19066
         // Layout is necessary since start's node's inline renderers may have been destroyed by the insertion
         // The end of the content may have changed after the insertion and layout so update it as well.
-        if (insertionPos == start.deepEquivalent()) {
-            listElement->document().updateLayoutIgnorePendingStylesheets();
-            start = startOfParagraph(originalStart, CanSkipOverEditingBoundary);
-            end = endOfParagraph(start, CanSkipOverEditingBoundary);
-        }
+        if (insertionPos == start.deepEquivalent())
+            start = originalStart;
     }
 
+    // Inserting list element and list item list may change start of pargraph
+    // to move. We calculate start of paragraph again.
+    document().updateLayoutIgnorePendingStylesheets();
+    start = startOfParagraph(start, CanSkipOverEditingBoundary);
+    end = endOfParagraph(start, CanSkipOverEditingBoundary);
     moveParagraph(start, end, VisiblePosition(positionBeforeNode(placeholder.get())), true);
 
     if (listElement)
@@ -400,6 +402,12 @@ PassRefPtrWillBeRawPtr<HTMLElement> InsertListCommand::listifyParagraph(const Vi
         mergeIdenticalElements(previousList, nextList);
 
     return listElement;
+}
+
+void InsertListCommand::trace(Visitor* visitor)
+{
+    visitor->trace(m_listElement);
+    CompositeEditCommand::trace(visitor);
 }
 
 }

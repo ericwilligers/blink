@@ -47,7 +47,6 @@
 #include "platform/text/TextCheckerClient.h"
 #include "public/platform/WebScreenInfo.h"
 #include "wtf/Forward.h"
-
 #include <v8.h>
 
 /*
@@ -158,8 +157,6 @@ public:
     virtual void setTouchAction(TouchAction touchAction) OVERRIDE { };
 
     virtual void numWheelEventHandlersChanged(unsigned) OVERRIDE { }
-
-    virtual bool shouldRubberBandInDirection(WebCore::ScrollDirection) const OVERRIDE { return false; }
 
     virtual void didAssociateFormControls(const WillBeHeapVector<RefPtrWillBeMember<Element> >&) OVERRIDE { }
 

@@ -43,7 +43,6 @@
         'devtools_core_base_js_files': [
             'front_end/inspector.html',
             'front_end/Tests.js',
-            'front_end/EditFileSystemDialog.js',
             'front_end/ForwardedInputEventHandler.js',
             'front_end/InspectorFrontendAPI.js',
             'front_end/InspectorFrontendEventSink.js',
@@ -51,7 +50,6 @@
             'front_end/jsdifflib.js',
             'front_end/ResponsiveDesignView.js',
             'front_end/ScreencastView.js',
-            'front_end/SettingsScreen.js',
             'front_end/TestController.js',
             'front_end/dialog.css',
             'front_end/inspector.css',
@@ -66,6 +64,7 @@
             'front_end/common/CompletionDictionary.js',
             'front_end/common/DOMExtension.js',
             'front_end/common/Geometry.js',
+            'front_end/common/MessageSink.js',
             'front_end/common/ModuleManager.js',
             'front_end/common/modules.js',
             'front_end/common/Object.js',
@@ -210,12 +209,15 @@
             'front_end/components/WorkerFrontendManager.js',
         ],
         'devtools_main_js_files': [
+            'front_end/main/AdvancedApp.js',
+            'front_end/main/App.js',
             'front_end/main/HelpScreenUntilReload.js',
+            'front_end/main/ScreencastApp.js',
+            'front_end/main/SimpleApp.js',
             'front_end/main/Main.js',
         ],
         'devtools_module_json_files': [
             'front_end/audits/module.json',
-            'front_end/components/module.json',
             'front_end/console/module.json',
             'front_end/devices/module.json',
             'front_end/elements/module.json',
@@ -286,6 +288,10 @@
         ],
         'devtools_devices_js_files': [
             'front_end/devices/DevicesView.js',
+        ],
+        'devtools_settings_js_files': [
+            'front_end/settings/EditFileSystemDialog.js',
+            'front_end/settings/SettingsScreen.js',
         ],
         'devtools_elements_js_files': [
             'front_end/elements/DOMSyntaxHighlighter.js',
@@ -376,6 +382,7 @@
             'front_end/timeline/TimelineFrameModel.js',
             'front_end/timeline/TimelineJSProfile.js',
             'front_end/timeline/TimelineModel.js',
+            'front_end/timeline/TimelineModelImpl.js',
             'front_end/timeline/TimelinePresentationModel.js',
             'front_end/timeline/TimelineOverviewPane.js',
             'front_end/timeline/TimelineEventOverview.js',
@@ -387,10 +394,11 @@
             'front_end/timeline/TimelinePowerGraph.js',
             'front_end/timeline/TimelinePowerOverview.js',
             'front_end/timeline/TimelinePanel.js',
-            'front_end/timeline/TimelineTraceEventBindings.js',
             'front_end/timeline/TimelineTracingView.js',
             'front_end/timeline/TimelineLayersView.js',
             'front_end/timeline/TracingModel.js',
+            'front_end/timeline/TracingTimelineModel.js',
+            'front_end/timeline/TracingTimelineUIUtils.js',
             'front_end/timeline/TransformController.js'
         ],
         'devtools_profiler_js_files': [
@@ -519,6 +527,8 @@
             'front_end/Images/resourcePlainIcon.png',
             'front_end/Images/resourcePlainIconSmall.png',
             'front_end/Images/resourcesTimeGraphIcon.png',
+            'front_end/Images/responsiveDesign.png',
+            'front_end/Images/responsiveDesign_2x.png',
             'front_end/Images/searchNext.png',
             'front_end/Images/searchPrev.png',
             'front_end/Images/sessionStorage.png',

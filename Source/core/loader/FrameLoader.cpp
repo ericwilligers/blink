@@ -311,7 +311,7 @@ void FrameLoader::receivedFirstData()
     HistoryCommitType historyCommitType = loadTypeToCommitType(m_loadType);
     if (historyCommitType == StandardCommit && (m_documentLoader->urlForHistory().isEmpty() || (opener() && !m_currentItem && m_documentLoader->originalRequest().url().isEmpty())))
         historyCommitType = HistoryInertCommit;
-    else if (historyCommitType == InitialCommitInChildFrame && MixedContentChecker::isMixedContent(m_frame->tree().top()->document()->securityOrigin(), m_documentLoader->url()))
+    else if (historyCommitType == InitialCommitInChildFrame && (!m_frame->tree().top()->isLocalFrame() || MixedContentChecker::isMixedContent(m_frame->tree().top()->document()->securityOrigin(), m_documentLoader->url())))
         historyCommitType = HistoryInertCommit;
     setHistoryItemStateForCommit(historyCommitType);
 
@@ -337,7 +337,7 @@ static void didFailContentSecurityPolicyCheck(FrameLoader* loader)
     // Fire a load event, as timing attacks would otherwise reveal that the
     // frame was blocked. This way, it looks like every other cross-origin
     // page.
-    if (FrameOwner* frameOwner = frame->ownerElement())
+    if (FrameOwner* frameOwner = frame->owner())
         frameOwner->dispatchLoad();
 }
 
@@ -415,8 +415,8 @@ void FrameLoader::loadDone()
 
 bool FrameLoader::allChildrenAreComplete() const
 {
-    for (LocalFrame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
-        if (!child->loader().m_isComplete)
+    for (Frame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+        if (child->isLocalFrame() && !toLocalFrame(child)->loader().m_isComplete)
             return false;
     }
     return true;
@@ -424,8 +424,8 @@ bool FrameLoader::allChildrenAreComplete() const
 
 bool FrameLoader::allAncestorsAreComplete() const
 {
-    for (LocalFrame* ancestor = m_frame; ancestor; ancestor = ancestor->tree().parent()) {
-        if (!ancestor->document()->loadEventFinished())
+    for (Frame* ancestor = m_frame; ancestor; ancestor = ancestor->tree().parent()) {
+        if (ancestor->isLocalFrame() && !toLocalFrame(ancestor)->document()->loadEventFinished())
             return false;
     }
     return true;
@@ -562,6 +562,8 @@ void FrameLoader::loadInSameDocument(const KURL& url, PassRefPtr<SerializedScrip
         if (m_provisionalDocumentLoader)
             m_provisionalDocumentLoader->detachFromFrame();
         m_provisionalDocumentLoader = nullptr;
+        if (!m_frame->host())
+            return;
     }
     saveScrollState();
 
@@ -608,8 +610,10 @@ void FrameLoader::completed()
 
 void FrameLoader::started()
 {
-    for (LocalFrame* frame = m_frame; frame; frame = frame->tree().parent())
-        frame->loader().m_isComplete = false;
+    for (Frame* frame = m_frame; frame; frame = frame->tree().parent()) {
+        if (frame->isLocalFrame())
+            toLocalFrame(frame)->loader().m_isComplete = false;
+    }
 }
 
 void FrameLoader::setReferrerForFrameRequest(ResourceRequest& request, ShouldSendReferrer shouldSendReferrer, Document* originDocument)
@@ -652,6 +656,8 @@ FrameLoadType FrameLoader::determineFrameLoadType(const FrameLoadRequest& reques
         return FrameLoadTypeBackForward;
     if (request.resourceRequest().cachePolicy() == ReloadIgnoringCacheData)
         return FrameLoadTypeReload;
+    if (request.resourceRequest().cachePolicy() == ReloadBypassingCache)
+        return FrameLoadTypeReloadFromOrigin;
     if (request.lockBackForwardList() || isScriptTriggeredFormSubmissionInChildFrame(request))
         return FrameLoadTypeRedirectWithLockedBackForwardList;
     if (!request.originDocument() && request.resourceRequest().url() == m_documentLoader->urlForHistory())
@@ -745,7 +751,7 @@ SubstituteData FrameLoader::defaultSubstituteDataForURL(const KURL& url)
 {
     if (!shouldTreatURLAsSrcdocDocument(url))
         return SubstituteData();
-    String srcdoc = m_frame->ownerElement()->fastGetAttribute(srcdocAttr);
+    String srcdoc = m_frame->deprecatedLocalOwner()->fastGetAttribute(srcdocAttr);
     ASSERT(!srcdoc.isNull());
     CString encodedSrcdoc = srcdoc.utf8();
     return SubstituteData(SharedBuffer::create(encodedSrcdoc.data(), encodedSrcdoc.length()), "text/html", "UTF-8", KURL());
@@ -780,7 +786,8 @@ void FrameLoader::reload(ReloadPolicy reloadPolicy, const KURL& overrideURL, con
     if (!m_currentItem)
         return;
 
-    ResourceRequest request = requestFromHistoryItem(m_currentItem.get(), ReloadIgnoringCacheData);
+    ResourceRequestCachePolicy cachePolicy = reloadPolicy == EndToEndReload ? ReloadBypassingCache : ReloadIgnoringCacheData;
+    ResourceRequest request = requestFromHistoryItem(m_currentItem.get(), cachePolicy);
     if (!overrideURL.isEmpty()) {
         request.setURL(overrideURL);
         request.clearHTTPReferrer();
@@ -805,8 +812,10 @@ void FrameLoader::stopAllLoaders()
 
     m_inStopAllLoaders = true;
 
-    for (RefPtr<LocalFrame> child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling())
-        child->loader().stopAllLoaders();
+    for (RefPtr<Frame> child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+        if (child->isLocalFrame())
+            toLocalFrame(child.get())->loader().stopAllLoaders();
+    }
     if (m_provisionalDocumentLoader)
         m_provisionalDocumentLoader->stopLoading();
     if (m_documentLoader)
@@ -939,6 +948,12 @@ bool FrameLoader::checkLoadCompleteForThisFrame()
     ASSERT(client()->hasWebView());
     RefPtr<LocalFrame> protect(m_frame);
 
+    bool allChildrenAreDoneLoading = true;
+    for (Frame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+        if (child->isLocalFrame())
+            allChildrenAreDoneLoading &= toLocalFrame(child)->loader().checkLoadCompleteForThisFrame();
+    }
+
     if (m_state == FrameStateProvisional && m_provisionalDocumentLoader) {
         const ResourceError& error = m_provisionalDocumentLoader->mainDocumentError();
         if (error.isNull())
@@ -954,9 +969,6 @@ bool FrameLoader::checkLoadCompleteForThisFrame()
         return true;
     }
 
-    bool allChildrenAreDoneLoading = true;
-    for (LocalFrame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling())
-        allChildrenAreDoneLoading &= child->loader().checkLoadCompleteForThisFrame();
     if (!allChildrenAreDoneLoading)
         return false;
 
@@ -1049,8 +1061,10 @@ void FrameLoader::detachChildren()
     typedef Vector<RefPtr<LocalFrame> > FrameVector;
     FrameVector childrenToDetach;
     childrenToDetach.reserveCapacity(m_frame->tree().childCount());
-    for (LocalFrame* child = m_frame->tree().lastChild(); child; child = child->tree().previousSibling())
-        childrenToDetach.append(child);
+    for (Frame* child = m_frame->tree().lastChild(); child; child = child->tree().previousSibling()) {
+        if (child->isLocalFrame())
+            childrenToDetach.append(toLocalFrame(child));
+    }
     FrameVector::iterator end = childrenToDetach.end();
     for (FrameVector::iterator it = childrenToDetach.begin(); it != end; ++it)
         (*it)->loader().detachFromParent();
@@ -1106,14 +1120,15 @@ void FrameLoader::detachFromParent()
     TemporaryChange<bool> willDetachClient(m_willDetachClient, true);
 
     // FIXME: All this code belongs up in Page.
-    if (LocalFrame* parent = m_frame->tree().parent()) {
+    Frame* parent = m_frame->tree().parent();
+    if (parent && parent->isLocalFrame()) {
         m_frame->setView(nullptr);
         // FIXME: Shouldn't need to check if page() is null here.
-        if (m_frame->ownerElement() && m_frame->page())
+        if (m_frame->owner() && m_frame->page())
             m_frame->page()->decrementSubframeCount();
         m_frame->willDetachFrameHost();
         detachClient();
-        parent->loader().scheduleCheckCompleted();
+        toLocalFrame(parent)->loader().scheduleCheckCompleted();
     } else {
         m_frame->setView(nullptr);
         m_frame->willDetachFrameHost();
@@ -1182,8 +1197,11 @@ void FrameLoader::receivedMainResourceError(const ResourceError& error)
     // FIXME: We really ought to be able to just check for isCancellation() here, but there are some
     // ResourceErrors that setIsCancellation() but aren't created by ResourceError::cancelledError().
     ResourceError c(ResourceError::cancelledError(KURL()));
-    if ((error.errorCode() != c.errorCode() || error.domain() != c.domain()) && m_frame->ownerElement())
-        m_frame->ownerElement()->renderFallbackContent();
+    if ((error.errorCode() != c.errorCode() || error.domain() != c.domain()) && m_frame->owner()) {
+        // FIXME: For now, fallback content doesn't work cross process.
+        ASSERT(m_frame->owner()->isLocal());
+        m_frame->deprecatedLocalOwner()->renderFallbackContent();
+    }
 
     checkCompleted();
     if (m_frame->page())
@@ -1233,8 +1251,11 @@ bool FrameLoader::shouldClose()
     // Store all references to each subframe in advance since beforeunload's event handler may modify frame
     Vector<RefPtr<LocalFrame> > targetFrames;
     targetFrames.append(m_frame);
-    for (LocalFrame* child = m_frame->tree().firstChild(); child; child = child->tree().traverseNext(m_frame))
-        targetFrames.append(child);
+    for (Frame* child = m_frame->tree().firstChild(); child; child = child->tree().traverseNext(m_frame)) {
+        // FIXME: There is not yet any way to dispatch events to out-of-process frames.
+        if (child->isLocalFrame())
+            targetFrames.append(toLocalFrame(child));
+    }
 
     bool shouldClose = false;
     {
@@ -1276,8 +1297,9 @@ void FrameLoader::loadWithNavigationAction(const NavigationAction& action, Frame
     m_policyDocumentLoader->setReplacesCurrentHistoryItem(replacesCurrentHistoryItem);
     m_policyDocumentLoader->setIsClientRedirect(clientRedirect == ClientRedirect);
 
-    if (LocalFrame* parent = m_frame->tree().parent())
-        m_policyDocumentLoader->setOverrideEncoding(parent->loader().documentLoader()->overrideEncoding());
+    Frame* parent = m_frame->tree().parent();
+    if (parent && parent->isLocalFrame())
+        m_policyDocumentLoader->setOverrideEncoding(toLocalFrame(parent)->loader().documentLoader()->overrideEncoding());
     else if (!overrideEncoding.isEmpty())
         m_policyDocumentLoader->setOverrideEncoding(overrideEncoding);
     else if (m_documentLoader)
@@ -1291,8 +1313,13 @@ void FrameLoader::loadWithNavigationAction(const NavigationAction& action, Frame
         return;
     }
 
-    // A new navigation is in progress, so don't clear the history's provisional item.
-    stopAllLoaders();
+    if (m_provisionalDocumentLoader) {
+        m_provisionalDocumentLoader->stopLoading();
+        if (m_provisionalDocumentLoader)
+            m_provisionalDocumentLoader->detachFromFrame();
+        m_provisionalDocumentLoader = nullptr;
+    }
+    m_checkTimer.stop();
 
     // <rdar://problem/6250856> - In certain circumstances on pages with multiple frames, stopAllLoaders()
     // might detach the current FrameLoader, in which case we should bail on this newly defunct load.
@@ -1330,7 +1357,7 @@ bool FrameLoader::shouldInterruptLoadForXFrameOptions(const String& content, con
 {
     UseCounter::count(m_frame->domWindow()->document(), UseCounter::XFrameOptions);
 
-    LocalFrame* topFrame = m_frame->tree().top();
+    Frame* topFrame = m_frame->tree().top();
     if (m_frame == topFrame)
         return false;
 
@@ -1340,10 +1367,11 @@ bool FrameLoader::shouldInterruptLoadForXFrameOptions(const String& content, con
     case XFrameOptionsSameOrigin: {
         UseCounter::count(m_frame->domWindow()->document(), UseCounter::XFrameOptionsSameOrigin);
         RefPtr<SecurityOrigin> origin = SecurityOrigin::create(url);
-        if (!origin->isSameSchemeHostPort(topFrame->document()->securityOrigin()))
+        // Out-of-process ancestors are always a different origin.
+        if (!topFrame->isLocalFrame() || !origin->isSameSchemeHostPort(toLocalFrame(topFrame)->document()->securityOrigin()))
             return true;
-        for (LocalFrame* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent()) {
-            if (!origin->isSameSchemeHostPort(frame->document()->securityOrigin())) {
+        for (Frame* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent()) {
+            if (!frame->isLocalFrame() || !origin->isSameSchemeHostPort(toLocalFrame(frame)->document()->securityOrigin())) {
                 UseCounter::count(m_frame->domWindow()->document(), UseCounter::XFrameOptionsSameOriginWithBadAncestorChain);
                 break;
             }
@@ -1375,7 +1403,7 @@ bool FrameLoader::shouldTreatURLAsSrcdocDocument(const KURL& url) const
 {
     if (!equalIgnoringCase(url.string(), "about:srcdoc"))
         return false;
-    HTMLFrameOwnerElement* ownerElement = m_frame->ownerElement();
+    HTMLFrameOwnerElement* ownerElement = m_frame->deprecatedLocalOwner();
     if (!isHTMLIFrameElement(ownerElement))
         return false;
     return ownerElement->fastHasAttribute(srcdocAttr);
@@ -1384,10 +1412,10 @@ bool FrameLoader::shouldTreatURLAsSrcdocDocument(const KURL& url) const
 LocalFrame* FrameLoader::findFrameForNavigation(const AtomicString& name, Document* activeDocument)
 {
     ASSERT(activeDocument);
-    LocalFrame* frame = m_frame->tree().find(name);
-    if (!activeDocument->canNavigate(frame))
+    Frame* frame = m_frame->tree().find(name);
+    if (!frame || !frame->isLocalFrame() || !activeDocument->canNavigate(toLocalFrame(*frame)))
         return 0;
-    return frame;
+    return toLocalFrame(frame);
 }
 
 void FrameLoader::loadHistoryItem(HistoryItem* item, HistoryLoadType historyLoadType, ResourceRequestCachePolicy cachePolicy)
@@ -1438,9 +1466,11 @@ void FrameLoader::dispatchDidClearWindowObjectInMainWorld()
 SandboxFlags FrameLoader::effectiveSandboxFlags() const
 {
     SandboxFlags flags = m_forcedSandboxFlags;
-    if (LocalFrame* parentFrame = m_frame->tree().parent())
-        flags |= parentFrame->document()->sandboxFlags();
-    if (FrameOwner* frameOwner = m_frame->ownerElement())
+    // FIXME: We need a way to propagate sandbox flags to out-of-process frames.
+    Frame* parentFrame = m_frame->tree().parent();
+    if (parentFrame && parentFrame->isLocalFrame())
+        flags |= toLocalFrame(parentFrame)->document()->sandboxFlags();
+    if (FrameOwner* frameOwner = m_frame->owner())
         flags |= frameOwner->sandboxFlags();
     return flags;
 }

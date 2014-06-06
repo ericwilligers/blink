@@ -54,8 +54,8 @@ class ThreadableLoaderClient;
 class DocumentThreadableLoader FINAL : public ThreadableLoader, private ResourceOwner<RawResource>  {
     WTF_MAKE_FAST_ALLOCATED;
     public:
-        static void loadResourceSynchronously(Document&, const ResourceRequest&, ThreadableLoaderClient&, const ThreadableLoaderOptions&);
-        static PassRefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient*, const ResourceRequest&, const ThreadableLoaderOptions&);
+        static void loadResourceSynchronously(Document&, const ResourceRequest&, ThreadableLoaderClient&, const ThreadableLoaderOptions&, const ResourceLoaderOptions&);
+        static PassRefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient*, const ResourceRequest&, const ThreadableLoaderOptions&, const ResourceLoaderOptions&);
         virtual ~DocumentThreadableLoader();
 
         virtual void cancel() OVERRIDE;
@@ -67,7 +67,7 @@ class DocumentThreadableLoader FINAL : public ThreadableLoader, private Resource
             LoadAsynchronously
         };
 
-        DocumentThreadableLoader(Document&, ThreadableLoaderClient*, BlockingBehavior, const ResourceRequest&, const ThreadableLoaderOptions&);
+        DocumentThreadableLoader(Document&, ThreadableLoaderClient*, BlockingBehavior, const ResourceRequest&, const ThreadableLoaderOptions&, const ResourceLoaderOptions&);
 
         // RawResourceClient implementation
         virtual void dataSent(Resource*, unsigned long long bytesSent, unsigned long long totalBytesToBeSent) OVERRIDE;
@@ -96,19 +96,37 @@ class DocumentThreadableLoader FINAL : public ThreadableLoader, private Resource
         // the actual request will be made later in handleSuccessfulFinish().
         void handlePreflightResponse(unsigned long identifier, const ResourceResponse&);
 
-        void loadRequest(const ResourceRequest&);
+        void loadRequest(const ResourceRequest&, ResourceLoaderOptions);
         bool isAllowedRedirect(const KURL&) const;
         bool isAllowedByPolicy(const KURL&) const;
+        // Returns DoNotAllowStoredCredentials
+        // if m_forceDoNotAllowStoredCredentials is set. Otherwise, just
+        // returns allowCredentials value of m_resourceLoaderOptions.
+        StoredCredentials effectiveAllowCredentials() const;
 
         SecurityOrigin* securityOrigin() const;
 
         ThreadableLoaderClient* m_client;
         Document& m_document;
-        ThreadableLoaderOptions m_options;
+
+        const ThreadableLoaderOptions m_options;
+        // Some items may be overridden by m_forceDoNotAllowStoredCredentials
+        // and m_securityOrigin. In such a case, build a ResourceLoaderOptions
+        // with up-to-date values from them and this variable, and use it.
+        const ResourceLoaderOptions m_resourceLoaderOptions;
+
+        bool m_forceDoNotAllowStoredCredentials;
+        RefPtr<SecurityOrigin> m_securityOrigin;
+
         bool m_sameOriginRequest;
         bool m_simpleRequest;
         bool m_async;
-        OwnPtr<ResourceRequest> m_actualRequest; // non-null during Access Control preflight checks
+
+        // Holds the original request and options for it during preflight
+        // request handling phase.
+        OwnPtr<ResourceRequest> m_actualRequest;
+        OwnPtr<ResourceLoaderOptions> m_actualOptions;
+
         HTTPHeaderMap m_simpleRequestHeaders; // stores simple request headers in case of a cross-origin redirect.
         Timer<DocumentThreadableLoader> m_timeoutTimer;
     };

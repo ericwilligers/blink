@@ -109,7 +109,7 @@ FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLa
     FloatPoint result;
 
     if (!hasFixedPositionStep() && !hasTransformStep() && !hasNonUniformStep() && (!container || (m_mapping.size() && container == m_mapping[0].m_renderer)))
-        result = p + roundedIntSize(m_accumulatedOffset);
+        result = p + m_accumulatedOffset;
     else {
         TransformState transformState(TransformState::ApplyTransformDirection, p);
         mapToContainer(transformState, container);
@@ -125,7 +125,7 @@ FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLa
         // therefore not necessarily expected to be correct here. This is ok,
         // because they will be recomputed if the layer becomes visible.
         if (!layer || !layer->subtreeIsInvisible()) {
-            FloatPoint rendererMappedResult = lastRenderer->localToAbsolute(p, m_mapCoordinatesFlags);
+            FloatPoint rendererMappedResult = lastRenderer->localToContainerPoint(p, container, m_mapCoordinatesFlags);
 
             ASSERT(roundedIntPoint(rendererMappedResult) == roundedIntPoint(result));
         }
@@ -137,7 +137,7 @@ FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLa
 
 #ifndef NDEBUG
 // Handy function to call from gdb while debugging mismatched point/rect errors.
-void RenderGeometryMap::dumpSteps()
+void RenderGeometryMap::dumpSteps() const
 {
     fprintf(stderr, "RenderGeometryMap::dumpSteps accumulatedOffset=%d,%d\n", m_accumulatedOffset.width().toInt(), m_accumulatedOffset.height().toInt());
     for (int i = m_mapping.size() - 1; i >= 0; --i) {
@@ -235,7 +235,8 @@ void RenderGeometryMap::pushMappingsToAncestor(const RenderLayer* layer, const R
         }
 
         TemporaryChange<size_t> positionChange(m_insertionPosition, m_mapping.size());
-        push(renderer, toLayoutSize(layerOffset), /*accumulatingTransform*/ true, /*isNonUniform*/ false, /*isFixedPosition*/ false, /*hasTransform*/ false);
+        bool accumulatingTransform = layer->renderer()->style()->preserves3D() || ancestorLayer->renderer()->style()->preserves3D();
+        push(renderer, toLayoutSize(layerOffset), accumulatingTransform, /*isNonUniform*/ false, /*isFixedPosition*/ false, /*hasTransform*/ false);
         return;
     }
     const RenderLayerModelObject* ancestorRenderer = ancestorLayer ? ancestorLayer->renderer() : 0;
