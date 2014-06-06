@@ -2,7 +2,6 @@
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <container id="container"></container>
 <script>
-var measurementReady = false;
 var N = 500;
 var duration = 1000;
 
@@ -54,7 +53,7 @@ requestAnimationFrame(function(t) {
     if (i < N) {
       requestAnimationFrame(staggeredStart);
     } else {
-      measurementReady = true;
+      window.measurementReady = true;
     }
   }
   requestAnimationFrame(staggeredStart);

@@ -3,13 +3,10 @@
 <script src="resources/web-animations-api-check.js"></script>
 <container id="container"></container>
 <script>
-var measurementReady = false;
 var N = 1000;
 var duration = 1000;
 var players = [];
 var prevTime = null;
-
-checkWebAnimationsAPI();
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
@@ -42,7 +39,7 @@ function setCurrentTime(time) {
 requestAnimationFrame(setCurrentTime);
 
 requestAnimationFrame(function() {
-  measurementReady = true;
+  window.measurementReady = true;
 });
 </script>
 <style>

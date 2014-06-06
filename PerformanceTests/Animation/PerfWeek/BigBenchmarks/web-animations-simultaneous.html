@@ -1,14 +1,11 @@
 <!doctype html>
 <meta name="viewport" content="width=device-width, user-scalable=no">
-<script src="../resources/web-animations-api-check.js"></script>
+<script src="resources/web-animations-api-check.js"></script>
 <container id="container"></container>
 <script>
-var measurementReady = false;
 var N = 1000;
 var duration = 1000;
 var targets = [];
-
-checkWebAnimationsAPI();
 
 function startAnimation(element) {
   element.animate([
@@ -32,7 +29,7 @@ for (var i = 0; i < N; i++) {
 startAllAnimations();
 
 requestAnimationFrame(function() {
-  measurementReady = true;
+  window.measurementReady = true;
 });
 </script>
 
